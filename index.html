@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hoodie Bestellung</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+        .container { max-width: 600px; background: white; padding: 20px; border-radius: 8px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .step { display: none; }
+        .step.active { display: block; }
+        input[type="text"], input[type="email"], input[type="number"] { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        .btn { background: #000; color: #fff; padding: 10px 20px; border: none; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn:hover { background: #333; }
+        .hoodie-grid { display: flex; gap: 10px; margin-bottom: 20px; }
+        .hoodie-img { width: 50%; border-radius: 8px; }
+        .size-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .size-row input { width: 60px; text-align: center; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Limitierten Hoodie sichern</h2>
+    <form id="orderForm">
+        <!-- Spam Honeypot -->
+        <input type="text" id="honeypot" class="hidden" autocomplete="off">
+
+        <!-- SCHRITT 1: Kundendaten -->
+        <div class="step active" id="step1">
+            <h3>Schritt 1: Deine Daten</h3>
+            <label>Vor- & Nachname*</label>
+            <input type="text" id="name" required>
+            <label>Vollständige Adresse (Straße, PLZ, Ort)*</label>
+            <input type="text" id="address" required>
+            <label>E-Mail Adresse*</label>
+            <input type="email" id="email" required>
+            <button type="button" class="btn" onclick="nextStep(2)">Weiter zur Produktauswahl</button>
+        </div>
+
+        <!-- SCHRITT 2: Produkte -->
+        <div class="step" id="step2">
+            <h3>Schritt 2: Produktauswahl (49,95 € / Stück)</h3>
+            <div class="hoodie-grid">
+                <img src="https://via.placeholder.com/300x300?text=Hoodie+Front" class="hoodie-img" alt="Hoodie Front">
+                <img src="https://via.placeholder.com/300x300?text=Hoodie+Back" class="hoodie-img" alt="Hoodie Back">
+            </div>
+            <div id="sizes">
+                <div class="size-row"><span>Größe S</span><input type="number" id="qtyS" min="0" value="0"></div>
+                <div class="size-row"><span>Größe M</span><input type="number" id="qtyM" min="0" value="0"></div>
+                <div class="size-row"><span>Größe L</span><input type="number" id="qtyL" min="0" value="0"></div>
+                <div class="size-row"><span>Größe XL</span><input type="number" id="qtyXL" min="0" value="0"></div>
+            </div>
+            <button type="button" class="btn" onclick="nextStep(1)" style="background:#888;">Zurück</button>
+            <button type="button" class="btn" onclick="goToSummary()">Weiter zur Bestätigung</button>
+        </div>
+
+        <!-- SCHRITT 3: Bestätigung -->
+        <div class="step" id="step3">
+            <h3>Schritt 3: Übersicht & Bestätigung</h3>
+            <div id="summaryBox" style="background:#f9f9f9; padding:15px; margin-bottom:15px;"></div>
+            
+            <p style="font-size: 0.9em; color: #d9534f; font-weight: bold;">
+                Hinweis: Mit Klick auf "Kostenpflichtig bestellen" wird eine verbindliche Bestellung ausgelöst. Die Rechnung ist innerhalb von 7 Tagen zu bezahlen.
+            </p>
+            
+            <label style="font-size: 0.9em; display:flex; gap:10px; align-items:start;">
+                <input type="checkbox" id="dsgvo" required>
+                <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
+            </label>
+
+            <button type="button" class="btn" onclick="nextStep(2)" style="background:#888;">Zurück ändern</button>
+            <button type="submit" class="btn" style="background:green;">Kostenpflichtig bestellen</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const pricePerItem = 49.95;
+
+    function nextStep(step) {
+        // Simple Validation Step 1
+        if(step === 2 && (!document.getElementById('name').value || !document.getElementById('address').value || !document.getElementById('email').checkValidity())) {
+            alert('Bitte fülle alle Felder korrekt aus.');
+            return;
+        }
+        document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+        document.getElementById('step' + step).classList.add('active');
+    }
+
+    function goToSummary() {
+        const s = parseInt(document.getElementById('qtyS').value) || 0;
+        const m = parseInt(document.getElementById('qtyM').value) || 0;
+        const l = parseInt(document.getElementById('qtyL').value) || 0;
+        const xl = parseInt(document.getElementById('qtyXL').value) || 0;
+        const totalQty = s + m + l + xl;
+
+        if(totalQty === 0) { alert('Bitte wähle mindestens einen Hoodie aus.'); return; }
+
+        let html = `<strong>Käufer:</strong><br>${document.getElementById('name').value}<br>${document.getElementById('address').value}<br>${document.getElementById('email').value}<hr>`;
+        html += `<strong>Produkte:</strong><br>`;
+        if(s>0) html += `${s}x Größe S<br>`;
+        if(m>0) html += `${m}x Größe M<br>`;
+        if(l>0) html += `${l}x Größe L<br>`;
+        if(xl>0) html += `${xl}x Größe XL<br>`;
+        html += `<hr><strong>Gesamtbetrag: ${(totalQty * pricePerItem).toFixed(2).replace('.', ',')} €</strong>`;
+        
+        document.getElementById('summaryBox').innerHTML = html;
+        nextStep(3);
+    }
+
+    document.getElementById('orderForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            name: document.getElementById('name').value,
+            address: document.getElementById('address').value,
+            email: document.getElementById('email').value,
+            honeypot: document.getElementById('honeypot').value,
+            dsgvo: document.getElementById('dsgvo').checked,
+            items: {
+                S: parseInt(document.getElementById('qtyS').value) || 0,
+                M: parseInt(document.getElementById('qtyM').value) || 0,
+                L: parseInt(document.getElementById('qtyL').value) || 0,
+                XL: parseInt(document.getElementById('qtyXL').value) || 0
+            }
+        };
+
+        const btn = document.querySelector('button[type="submit"]');
+        btn.innerText = 'Bitte warten...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch('/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if(res.ok) {
+                document.querySelector('.container').innerHTML = `<h2>Vielen Dank!</h2><p>Deine Bestellung war erfolgreich. Die Rechnung wurde per E-Mail an dich versendet.</p>`;
+            } else {
+                const text = await res.text();
+                alert('Fehler: ' + text);
+                btn.innerText = 'Kostenpflichtig bestellen';
+                btn.disabled = false;
+            }
+        } catch(err) {
+            alert('Netzwerkfehler');
+            btn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
