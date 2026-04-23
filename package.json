@@ -6,5 +6,24 @@
     "mongoose": "^9.5.0",
     "nodemailer": "^8.0.5",
     "pdfkit": "^0.18.0"
-  }
+  },
+  "name": "hoodies-shop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tksmtrr2x4-ship-it/hoodies-shop.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tksmtrr2x4-ship-it/hoodies-shop/issues"
+  },
+  "homepage": "https://github.com/tksmtrr2x4-ship-it/hoodies-shop#readme"
 }
