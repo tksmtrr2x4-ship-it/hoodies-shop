@@ -10,10 +10,10 @@
         .step { display: none; }
         .step.active { display: block; }
         input[type="text"], input[type="email"], input[type="number"] { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
-        .btn { background: #000; color: #fff; padding: 10px 20px; border: none; cursor: pointer; width: 100%; margin-top: 10px; }
+        .btn { background: #000; color: #fff; padding: 10px 20px; border: none; cursor: pointer; width: 100%; margin-top: 10px; border-radius: 4px; font-weight: bold; }
         .btn:hover { background: #333; }
         .hoodie-grid { display: flex; gap: 10px; margin-bottom: 20px; }
-        .hoodie-img { width: 50%; border-radius: 8px; }
+        .hoodie-img { width: 50%; border-radius: 8px; object-fit: cover; }
         .size-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .size-row input { width: 60px; text-align: center; }
         .hidden { display: none !important; }
@@ -27,13 +27,11 @@
         <!-- Spam Honeypot -->
         <input type="text" id="honeypot" class="hidden" autocomplete="off">
 
-        <!-- SCHRITT 1: Kundendaten -->
+        <!-- SCHRITT 1: Kundendaten (Ohne Adresse) -->
         <div class="step active" id="step1">
             <h3>Schritt 1: Deine Daten</h3>
             <label>Vor- & Nachname*</label>
             <input type="text" id="name" required>
-            <label>Vollständige Adresse (Straße, PLZ, Ort)*</label>
-            <input type="text" id="address" required>
             <label>E-Mail Adresse*</label>
             <input type="email" id="email" required>
             <button type="button" class="btn" onclick="nextStep(2)">Weiter zur Produktauswahl</button>
@@ -43,6 +41,7 @@
         <div class="step" id="step2">
             <h3>Schritt 2: Produktauswahl (49,95 € / Stück)</h3>
             <div class="hoodie-grid">
+                <!-- Hier kannst du später deine echten Bilder verlinken -->
                 <img src="https://via.placeholder.com/300x300?text=Hoodie+Front" class="hoodie-img" alt="Hoodie Front">
                 <img src="https://via.placeholder.com/300x300?text=Hoodie+Back" class="hoodie-img" alt="Hoodie Back">
             </div>
@@ -59,30 +58,32 @@
         <!-- SCHRITT 3: Bestätigung -->
         <div class="step" id="step3">
             <h3>Schritt 3: Übersicht & Bestätigung</h3>
-            <div id="summaryBox" style="background:#f9f9f9; padding:15px; margin-bottom:15px;"></div>
+            <div id="summaryBox" style="background:#f9f9f9; padding:15px; margin-bottom:15px; border-radius: 4px;"></div>
             
             <p style="font-size: 0.9em; color: #d9534f; font-weight: bold;">
-                Hinweis: Mit Klick auf "Kostenpflichtig bestellen" wird eine verbindliche Bestellung ausgelöst. Die Rechnung ist innerhalb von 7 Tagen zu bezahlen.
+                Hinweis: Mit Klick auf "Kostenpflichtig bestellen" wird eine verbindliche Bestellung ausgelöst. 
+                Die Rechnung erhältst du im Anschluss per E-Mail.
             </p>
             
-            <label style="font-size: 0.9em; display:flex; gap:10px; align-items:start;">
-                <input type="checkbox" id="dsgvo" required>
+            <label style="font-size: 0.9em; display:flex; gap:10px; align-items:start; margin-top: 15px;">
+                <input type="checkbox" id="dsgvo" required style="width: auto; transform: scale(1.2); margin-top: 3px;">
                 <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
             </label>
 
-            <button type="button" class="btn" onclick="nextStep(2)" style="background:#888;">Zurück ändern</button>
-            <button type="submit" class="btn" style="background:green;">Kostenpflichtig bestellen</button>
+            <button type="button" class="btn" onclick="nextStep(2)" style="background:#888; margin-top: 20px;">Zurück ändern</button>
+            <button type="submit" class="btn" style="background:#28a745;">Kostenpflichtig bestellen</button>
         </div>
     </form>
 </div>
 
 <script>
+    // PREIS HIER ANPASSEN (Muss mit dem Preis in Vercel übereinstimmen)
     const pricePerItem = 49.95;
 
     function nextStep(step) {
-        // Simple Validation Step 1
-        if(step === 2 && (!document.getElementById('name').value || !document.getElementById('address').value || !document.getElementById('email').checkValidity())) {
-            alert('Bitte fülle alle Felder korrekt aus.');
+        // Validierung für Schritt 1 (Name & E-Mail müssen ausgefüllt sein)
+        if(step === 2 && (!document.getElementById('name').value || !document.getElementById('email').checkValidity())) {
+            alert('Bitte fülle Name und E-Mail korrekt aus.');
             return;
         }
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
@@ -96,9 +97,13 @@
         const xl = parseInt(document.getElementById('qtyXL').value) || 0;
         const totalQty = s + m + l + xl;
 
-        if(totalQty === 0) { alert('Bitte wähle mindestens einen Hoodie aus.'); return; }
+        if(totalQty === 0) { 
+            alert('Bitte wähle mindestens einen Hoodie aus.'); 
+            return; 
+        }
 
-        let html = `<strong>Käufer:</strong><br>${document.getElementById('name').value}<br>${document.getElementById('address').value}<br>${document.getElementById('email').value}<hr>`;
+        // Zusammenfassung aufbauen (Ohne Adresse)
+        let html = `<strong>Käufer:</strong><br>${document.getElementById('name').value}<br>${document.getElementById('email').value}<hr>`;
         html += `<strong>Produkte:</strong><br>`;
         if(s>0) html += `${s}x Größe S<br>`;
         if(m>0) html += `${m}x Größe M<br>`;
@@ -113,9 +118,9 @@
     document.getElementById('orderForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        // Payload ohne "address"
         const payload = {
             name: document.getElementById('name').value,
-            address: document.getElementById('address').value,
             email: document.getElementById('email').value,
             honeypot: document.getElementById('honeypot').value,
             dsgvo: document.getElementById('dsgvo').checked,
@@ -138,7 +143,10 @@
                 body: JSON.stringify(payload)
             });
             if(res.ok) {
-                document.querySelector('.container').innerHTML = `<h2>Vielen Dank!</h2><p>Deine Bestellung war erfolgreich. Die Rechnung wurde per E-Mail an dich versendet.</p>`;
+                document.querySelector('.container').innerHTML = `
+                    <h2 style="color: #28a745;">Vielen Dank!</h2>
+                    <p>Deine Bestellung war erfolgreich. Deine Rechnung wurde gerade generiert und ist per E-Mail auf dem Weg zu dir.</p>
+                `;
             } else {
                 const text = await res.text();
                 alert('Fehler: ' + text);
@@ -146,7 +154,8 @@
                 btn.disabled = false;
             }
         } catch(err) {
-            alert('Netzwerkfehler');
+            alert('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.');
+            btn.innerText = 'Kostenpflichtig bestellen';
             btn.disabled = false;
         }
     });

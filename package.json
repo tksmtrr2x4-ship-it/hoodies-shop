@@ -6,7 +6,8 @@
     "mongodb": "^7.2.0",
     "mongoose": "^9.5.0",
     "nodemailer": "^8.0.5",
-    "pdfkit": "^0.18.0"
+    "pdfkit": "^0.18.0",
+    "qrcode": "^1.5.4"
   },
   "name": "hoodies-shop",
   "version": "1.0.0",

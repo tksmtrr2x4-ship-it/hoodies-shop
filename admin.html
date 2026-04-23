@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
-        .container { background: white; padding: 20px; border-radius: 8px; max-width: 1000px; margin: auto; }
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; margin: 0;}
+        .container { background: white; padding: 20px; border-radius: 8px; max-width: 1100px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #000; color: white; }
@@ -13,63 +13,134 @@
         .btn-green { background: #28a745; }
         #loginScreen { text-align: center; margin-top: 100px; }
         #dashboard { display: none; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; font-weight: bold; background: #eee; border-radius: 5px 5px 0 0; }
+        .tab.active { background: #000; color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Formular */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;}
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        label { font-size: 0.85em; font-weight: bold; margin-bottom: 5px; display: block;}
     </style>
 </head>
 <body>
 
-    <!-- Login Screen -->
     <div id="loginScreen">
         <h2>Admin Login</h2>
-        <input type="text" id="user" placeholder="Benutzername" style="padding:10px; margin-bottom:10px;"><br>
-        <input type="password" id="pass" placeholder="Passwort" style="padding:10px; margin-bottom:10px;"><br>
+        <input type="text" id="user" placeholder="Benutzer" style="width: 250px; margin-bottom:10px;"><br>
+        <input type="password" id="pass" placeholder="Passwort" style="width: 250px; margin-bottom:10px;"><br>
         <button class="btn" onclick="login()">Einloggen</button>
     </div>
 
-    <!-- Dashboard -->
     <div id="dashboard" class="container">
-        <h1>Hoodie Bestellungen</h1>
-        <button class="btn" onclick="exportCSV()">CSV Exportieren</button>
-        <input type="text" id="search" placeholder="Suche nach Name..." onkeyup="filterTable()" style="padding:8px; width:250px; margin-left:10px;">
-        
-        <table>
-            <thead><tr><th>Datum</th><th>Kunde</th><th>Produkte</th><th>Betrag</th><th>Status</th><th>Aktion</th></tr></thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('orders')">📦 Bestellungen</div>
+            <div class="tab" onclick="switchTab('settings')">⚙️ Rechnungseinstellungen</div>
+        </div>
+
+        <!-- TAB: BESTELLUNGEN -->
+        <div id="orders" class="tab-content active">
+            <button class="btn" onclick="exportCSV()">CSV Exportieren</button>
+            <input type="text" id="search" placeholder="Suche..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
+            
+            <table>
+                <thead><tr><th>RE-Nr. & Datum</th><th>Kunde</th><th>Produkte</th><th>Betrag</th><th>Status</th><th>Aktion</th></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- TAB: EINSTELLUNGEN -->
+        <div id="settings" class="tab-content">
+            <h3>Daten für die automatische PDF-Rechnung</h3>
+            <div class="grid">
+                <div><label>Dein Firmenname / Name</label><input type="text" id="set_name"></div>
+                <div><label>E-Mail Absender</label><input type="text" id="set_email"></div>
+                <div><label>Straße & Hausnummer</label><input type="text" id="set_street"></div>
+                <div><label>PLZ & Ort</label><input type="text" id="set_city"></div>
+                <div><label>Steuernummer / USt-IdNr.</label><input type="text" id="set_tax"></div>
+                <div><label>Zahlungsziel (Tage)</label><input type="number" id="set_days"></div>
+                <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px;"></div>
+                <div><label>IBAN (Generiert den GiroCode)</label><input type="text" id="set_iban"></div>
+                <div><label>PayPal E-Mail (Generiert den PP-Code)</label><input type="text" id="set_paypal"></div>
+            </div>
+            <button class="btn btn-green" onclick="saveSettings()">Einstellungen speichern</button>
+        </div>
     </div>
 
     <script>
         let authHeader = '';
 
         async function login() {
-            const user = document.getElementById('user').value;
-            const pass = document.getElementById('pass').value;
-            authHeader = 'Basic ' + btoa(user + ':' + pass);
-            
+            authHeader = 'Basic ' + btoa(document.getElementById('user').value + ':' + document.getElementById('pass').value);
             const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
             
             if(res.ok) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
                 renderTable(await res.json());
-            } else {
-                alert('Falsche Zugangsdaten!');
-            }
+                loadSettings(); // Lädt deine Rechnungsdaten
+            } else { alert('Falsche Zugangsdaten!'); }
         }
 
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+        // --- EINSTELLUNGEN LOGIK ---
+        async function loadSettings() {
+            const res = await fetch('/api/admin/settings', { headers: { 'Authorization': authHeader } });
+            const s = await res.json();
+            document.getElementById('set_name').value = s.issuerName || '';
+            document.getElementById('set_email').value = s.issuerEmail || '';
+            document.getElementById('set_street').value = s.issuerStreet || '';
+            document.getElementById('set_city').value = s.issuerCity || '';
+            document.getElementById('set_tax').value = s.issuerTaxId || '';
+            document.getElementById('set_iban').value = s.issuerIban || '';
+            document.getElementById('set_paypal').value = s.issuerPayPal || '';
+            document.getElementById('set_days').value = s.payDays || 14;
+        }
+
+        async function saveSettings() {
+            const payload = {
+                issuerName: document.getElementById('set_name').value,
+                issuerEmail: document.getElementById('set_email').value,
+                issuerStreet: document.getElementById('set_street').value,
+                issuerCity: document.getElementById('set_city').value,
+                issuerTaxId: document.getElementById('set_tax').value,
+                issuerIban: document.getElementById('set_iban').value,
+                issuerPayPal: document.getElementById('set_paypal').value,
+                payDays: parseInt(document.getElementById('set_days').value)
+            };
+            await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            alert('Rechnungseinstellungen gespeichert!');
+        }
+
+        // --- BESTELLUNGEN LOGIK ---
         function renderTable(orders) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             orders.forEach(o => {
-                const date = new Date(o.createdAt).toLocaleString('de-DE');
-                let itemsStr = Object.entries(o.items).filter(i => i[1]>0).map(i => `${i[1]}x Gr. ${i[0]}`).join(', ');
+                const date = new Date(o.createdAt).toLocaleDateString('de-DE');
+                let itemsStr = Object.entries(o.items).filter(i => i[1]>0).map(i => `${i[1]}x Gr. ${i[0]}`).join('<br>');
                 let btn = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')">✔ Bezahlt</button>` : 'Bezahlt';
 
                 tbody.innerHTML += `
                     <tr>
-                        <td>${date}</td>
-                        <td class="searchable"><strong>${o.name}</strong><br>${o.email}<br><small>${o.address}</small></td>
+                        <td><strong>${o.invoiceNumber}</strong><br><small>${date}</small></td>
+                        <td class="searchable"><strong>${o.name}</strong><br>${o.email}</td>
                         <td>${itemsStr}</td>
-                        <td>${o.totalPrice.toFixed(2)} €</td>
+                        <td>${o.totalPrice.toFixed(2).replace('.', ',')} €</td>
                         <td><strong>${o.status}</strong></td>
                         <td>${btn}</td>
                     </tr>`;
@@ -87,9 +158,8 @@
         async function exportCSV() {
             const res = await fetch('/api/admin/export', { headers: { 'Authorization': authHeader } });
             const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = window.URL.createObjectURL(blob);
             a.download = 'bestellungen.csv';
             a.click();
         }
