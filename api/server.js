@@ -37,18 +37,22 @@ const SettingsSchema = new mongoose.Schema({
     issuerIban: { type: String, default: "" },
     issuerPayPal: { type: String, default: "" },
     payDays: { type: Number, default: 14 },
-    supportPhone: { type: String, default: "" } // NEU: Telefonnummer
+    supportPhone: { type: String, default: "" },
+    shopStatus: { type: String, default: "geöffnet" } // NEU: Ampel-Status
 });
 const Settings = mongoose.model('Settings', SettingsSchema);
 
-// --- ÖFFENTLICHE API (Für die Anzeige der Telefonnummer) ---
+// --- ÖFFENTLICHE API (Ampel & Telefonnummer) ---
 app.get('/api/public-settings', async (req, res) => {
     try {
         await connectDB();
         let settings = await Settings.findOne();
-        res.json({ supportPhone: settings ? settings.supportPhone : "" });
+        res.json({ 
+            supportPhone: settings ? settings.supportPhone : "",
+            shopStatus: settings ? settings.shopStatus : "geöffnet"
+        });
     } catch (e) {
-        res.json({ supportPhone: "" });
+        res.json({ supportPhone: "", shopStatus: "geöffnet" });
     }
 });
 
@@ -56,6 +60,14 @@ app.get('/api/public-settings', async (req, res) => {
 app.post('/api/order', async (req, res) => {
     try {
         await connectDB();
+        
+        // Sicherheits-Check: Ist der Shop überhaupt offen?
+        let settings = await Settings.findOne();
+        if (!settings) settings = await Settings.create({}); 
+        if (settings.shopStatus !== 'geöffnet') {
+            return res.status(403).send('Der Verkauf ist aktuell nicht geöffnet.');
+        }
+
         const { name, email, role, items, honeypot, dsgvo } = req.body;
 
         if (honeypot) return res.status(400).send('Spam erkannt.');
@@ -77,11 +89,10 @@ app.post('/api/order', async (req, res) => {
         const newOrder = new Order({ invoiceNumber: invoiceNum, name, email, role, items, totalPrice, ipAddress });
         await newOrder.save();
 
-        let settings = await Settings.findOne();
-        if (!settings) settings = await Settings.create({}); 
-
         await createInvoiceAndSendEmail(newOrder, pricePerItem, settings);
-        res.status(200).json({ message: 'Bestellung erfolgreich', orderId: newOrder._id });
+        
+        // NEU: invoiceNumber wird an das Frontend für den Success-Screen zurückgegeben
+        res.status(200).json({ message: 'Bestellung erfolgreich', orderId: newOrder._id, invoiceNumber: invoiceNum });
     } catch (err) {
         console.error(err);
         res.status(500).send('Serverfehler bei der Bestellung.');
@@ -89,10 +100,7 @@ app.post('/api/order', async (req, res) => {
 });
 
 // --- ADMIN API ---
-const adminAuth = basicAuth({
-    users: {[process.env.ADMIN_USER]: process.env.ADMIN_PASS },
-    challenge: false 
-});
+const adminAuth = basicAuth({ users: {[process.env.ADMIN_USER]: process.env.ADMIN_PASS }, challenge: false });
 
 app.get('/api/admin/orders', adminAuth, async (req, res) => {
     await connectDB();
@@ -106,7 +114,6 @@ app.post('/api/admin/orders/:id/pay', adminAuth, async (req, res) => {
     res.sendStatus(200);
 });
 
-// NEU: Bestellung löschen
 app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
     await connectDB();
     await Order.findByIdAndDelete(req.params.id);
@@ -126,14 +133,36 @@ app.post('/api/admin/settings', adminAuth, async (req, res) => {
     res.sendStatus(200);
 });
 
+// NEU: CSV Export teilt jede Größe in eine eigene Zeile auf!
 app.get('/api/admin/export', adminAuth, async (req, res) => {
     await connectDB();
     const orders = await Order.find().lean();
-    const fields =['invoiceNumber', 'name', 'role', 'email', 'totalPrice', 'status', 'ipAddress', 'createdAt'];
+    let flattenedOrders =[];
+
+    orders.forEach(o => {
+        const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
+        // Jeden Hoodie einzeln iterieren
+        for (const [size, qty] of Object.entries(o.items)) {
+            for (let i = 0; i < qty; i++) {
+                flattenedOrders.push({
+                    invoiceNumber: o.invoiceNumber,
+                    name: o.name,
+                    role: o.role,
+                    email: o.email,
+                    size: size,
+                    price: singlePrice,
+                    status: o.status,
+                    createdAt: new Date(o.createdAt).toLocaleDateString('de-DE')
+                });
+            }
+        }
+    });
+
+    const fields =['invoiceNumber', 'name', 'role', 'email', 'size', 'price', 'status', 'createdAt'];
     const json2csvParser = new Parser({ fields });
     res.header('Content-Type', 'text/csv');
-    res.attachment('bestellungen.csv');
-    res.send(json2csvParser.parse(orders));
+    res.attachment('hoodie_bestellliste.csv');
+    res.send(json2csvParser.parse(flattenedOrders));
 });
 
 module.exports = app;

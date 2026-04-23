@@ -21,9 +21,10 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;}
-        input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+        input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
         label { font-size: 0.85em; font-weight: bold; margin-bottom: 5px; display: block;}
         .role-badge { background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 5px; }
+        .size-badge { background: #00AEEF; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 1.1em; }
     </style>
 </head>
 <body>
@@ -38,22 +39,34 @@
     <div id="dashboard" class="container">
         <div class="tabs">
             <div class="tab active" onclick="switchTab('orders')">📦 Bestellungen</div>
-            <div class="tab" onclick="switchTab('settings')">⚙️ Rechnungseinstellungen</div>
+            <div class="tab" onclick="switchTab('settings')">⚙️ Einstellungen & Ampel</div>
         </div>
 
         <div id="orders" class="tab-content active">
-            <button class="btn" onclick="exportCSV()">CSV Exportieren</button>
-            <input type="text" id="search" placeholder="Suche nach Name..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
+            <button class="btn" onclick="exportCSV()">CSV Exportieren (Druckfertig)</button>
+            <input type="text" id="search" placeholder="Suche nach Name oder RE-Nr..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
             
             <table>
-                <thead><tr><th>RE-Nr. & Datum</th><th>Kunde</th><th>Produkte</th><th>Betrag</th><th>Status</th><th style="min-width: 140px;">Aktion</th></tr></thead>
+                <thead><tr><th>Rechnungs-ID</th><th>Kunde</th><th>Größe</th><th>Einzelbetrag</th><th>Status</th><th style="min-width: 140px;">Aktion (Gilt für ganze Bestellung)</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
 
         <div id="settings" class="tab-content">
-            <h3>Daten für die automatische PDF-Rechnung & Support</h3>
+            <h3>Shop Steuerung & Rechnungsdaten</h3>
             <div class="grid">
+                <!-- NEU: Ampel Steuerung -->
+                <div style="grid-column: span 2; background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fde68a;">
+                    <label style="color: #b45309; font-size: 1.1em;">🚦 Shop Status (Ampel)</label>
+                    <select id="set_status" style="font-weight: bold; font-size: 1.1em;">
+                        <option value="geöffnet">🟢 Geöffnet (Kunden können bestellen)</option>
+                        <option value="bald">🟡 Startet bald (Formular gesperrt)</option>
+                        <option value="geschlossen">🔴 Geschlossen / Verkaufsstopp (Formular gesperrt)</option>
+                    </select>
+                </div>
+
+                <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px;"></div>
+
                 <div><label>Dein Firmenname / Absendername</label><input type="text" id="set_name"></div>
                 <div><label>E-Mail Absender</label><input type="text" id="set_email"></div>
                 <div><label>Straße & Hausnummer</label><input type="text" id="set_street"></div>
@@ -66,9 +79,8 @@
                 <div><label>IBAN (Generiert den GiroCode)</label><input type="text" id="set_iban"></div>
                 <div><label>PayPal E-Mail (Generiert den PP-Code)</label><input type="text" id="set_paypal"></div>
                 
-                <!-- NEU: Telefonnummer -->
                 <div style="grid-column: span 2; background: #e0f2fe; padding: 15px; border-radius: 8px;">
-                    <label style="color: #0369a1;">📞 Support-Telefonnummer (Wird öffentlich auf der Bestellseite angezeigt!)</label>
+                    <label style="color: #0369a1;">📞 Support-Telefonnummer (Öffentlich)</label>
                     <input type="text" id="set_phone" placeholder="z.B. +49 151 12345678">
                 </div>
             </div>
@@ -101,6 +113,7 @@
         async function loadSettings() {
             const res = await fetch('/api/admin/settings', { headers: { 'Authorization': authHeader } });
             const s = await res.json();
+            document.getElementById('set_status').value = s.shopStatus || 'geöffnet';
             document.getElementById('set_name').value = s.issuerName || '';
             document.getElementById('set_email').value = s.issuerEmail || '';
             document.getElementById('set_street').value = s.issuerStreet || '';
@@ -109,11 +122,12 @@
             document.getElementById('set_iban').value = s.issuerIban || '';
             document.getElementById('set_paypal').value = s.issuerPayPal || '';
             document.getElementById('set_days').value = s.payDays || 14;
-            document.getElementById('set_phone').value = s.supportPhone || ''; // Laden
+            document.getElementById('set_phone').value = s.supportPhone || '';
         }
 
         async function saveSettings() {
             const payload = {
+                shopStatus: document.getElementById('set_status').value,
                 issuerName: document.getElementById('set_name').value,
                 issuerEmail: document.getElementById('set_email').value,
                 issuerStreet: document.getElementById('set_street').value,
@@ -122,7 +136,7 @@
                 issuerIban: document.getElementById('set_iban').value,
                 issuerPayPal: document.getElementById('set_paypal').value,
                 payDays: parseInt(document.getElementById('set_days').value),
-                supportPhone: document.getElementById('set_phone').value // Speichern
+                supportPhone: document.getElementById('set_phone').value 
             };
             await fetch('/api/admin/settings', {
                 method: 'POST',
@@ -132,39 +146,45 @@
             alert('Einstellungen erfolgreich gespeichert!');
         }
 
+        // NEU: Tabelle zerlegt Bestellungen in Einzel-Hoodies
         function renderTable(orders) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             orders.forEach(o => {
                 const date = new Date(o.createdAt).toLocaleDateString('de-DE');
-                let itemsStr = Object.entries(o.items).filter(i => i[1]>0).map(i => `${i[1]}x Gr. ${i[0]}`).join('<br>');
+                const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
                 
                 let btnPay = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')">✔ Bezahlt</button>` : 'Bezahlt';
                 let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Bestellung löschen">🗑️</button>`;
 
-                tbody.innerHTML += `
-                    <tr>
-                        <td><strong>${o.invoiceNumber}</strong><br><small>${date}</small></td>
-                        <td class="searchable"><strong>${o.name}</strong> <span class="role-badge">${o.role}</span><br>${o.email}</td>
-                        <td>${itemsStr}</td>
-                        <td>${o.totalPrice.toFixed(2).replace('.', ',')} €</td>
-                        <td><strong>${o.status}</strong></td>
-                        <td>${btnPay} ${btnDel}</td>
-                    </tr>`;
+                // Schleife durch alle Größen
+                for (const [size, qty] of Object.entries(o.items)) {
+                    // Schleife durch die Anzahl einer Größe (z.B. qty: 2 -> zwei Zeilen erzeugen)
+                    for (let i = 0; i < qty; i++) {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="searchable"><strong>${o.invoiceNumber}</strong><br><small>${date}</small></td>
+                                <td class="searchable"><strong>${o.name}</strong> <span class="role-badge">${o.role}</span></td>
+                                <td><span class="size-badge">${size}</span></td>
+                                <td>${singlePrice.toFixed(2).replace('.', ',')} €</td>
+                                <td><strong>${o.status}</strong></td>
+                                <td>${btnPay} ${btnDel}</td>
+                            </tr>`;
+                    }
+                }
             });
         }
 
         async function markPaid(id) {
-            if(confirm('Zahlungseingang bestätigt?')) {
+            if(confirm('Zahlungseingang für die gesamte Rechnung bestätigt?')) {
                 await fetch(`/api/admin/orders/${id}/pay`, { method: 'POST', headers: { 'Authorization': authHeader } });
                 const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
                 renderTable(await res.json());
             }
         }
 
-        // NEU: LÖSCHEN LOGIK
         async function deleteOrder(id) {
-            if(confirm('ACHTUNG: Möchtest du diese Bestellung wirklich unwiderruflich löschen?')) {
+            if(confirm('ACHTUNG: Möchtest du diese gesamte Bestellung unwiderruflich löschen?')) {
                 await fetch(`/api/admin/orders/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
                 const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
                 renderTable(await res.json());
@@ -176,7 +196,7 @@
             const blob = await res.blob();
             const a = document.createElement('a');
             a.href = window.URL.createObjectURL(blob);
-            a.download = 'bestellungen.csv';
+            a.download = 'hoodie_bestellliste.csv';
             a.click();
         }
 

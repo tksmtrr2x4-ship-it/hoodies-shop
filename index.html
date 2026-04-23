@@ -27,6 +27,15 @@
 
         .disclaimer { background: #fdfae3; border-left: 4px solid #f0ad4e; color: #856404; padding: 12px; font-size: 0.85em; border-radius: 6px; margin-bottom: 25px; line-height: 1.4; }
 
+        /* NEU: Ampel Design */
+        .traffic-box { text-align: center; margin-bottom: 25px; }
+        .traffic-light { background: #222; padding: 12px; border-radius: 30px; display: inline-flex; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .light { width: 22px; height: 22px; border-radius: 50%; background: #444; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); transition: all 0.4s ease; }
+        .light.red.active { background: #ef4444; box-shadow: 0 0 20px #ef4444, inset 0 0 5px #fff; }
+        .light.yellow.active { background: #f59e0b; box-shadow: 0 0 20px #f59e0b, inset 0 0 5px #fff; }
+        .light.green.active { background: #10b981; box-shadow: 0 0 20px #10b981, inset 0 0 5px #fff; }
+        .status-msg { font-size: 1.1em; font-weight: 800; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
         .step { display: none; animation: fadeIn 0.4s ease-in-out; }
         .step.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -40,11 +49,7 @@
         .step-dot.active .step-dot-text { color: var(--secondary); }
 
         label { font-size: 0.9em; font-weight: 600; color: var(--secondary); margin-bottom: 5px; display: block; }
-        input[type="text"], input[type="email"], input[type="number"], select { 
-            width: 100%; padding: 14px; margin-bottom: 20px; box-sizing: border-box; 
-            border: 2px solid var(--border); border-radius: 8px; 
-            font-family: 'Poppins', sans-serif; font-size: 1em; transition: border-color 0.3s; background: #fff;
-        }
+        input[type="text"], input[type="email"], input[type="number"], select { width: 100%; padding: 14px; margin-bottom: 20px; box-sizing: border-box; border: 2px solid var(--border); border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 1em; transition: border-color 0.3s; background: #fff; }
         input:focus, select:focus { border-color: var(--primary); outline: none; }
 
         .btn { background: var(--secondary); color: #fff; padding: 15px 25px; border: none; cursor: pointer; width: 100%; border-radius: 8px; font-weight: 600; text-transform: uppercase; font-size: 1em; transition: all 0.3s ease; font-family: 'Poppins', sans-serif; letter-spacing: 1px; }
@@ -72,7 +77,6 @@
         .checkbox-container span { font-size: 0.85em; line-height: 1.4; color: #555; }
         .hidden { display: none !important; }
 
-        /* NEU: Support Footer Design */
         .support-footer { text-align: center; margin-top: 25px; font-size: 0.85em; color: #666; width: 100%; }
         .support-footer a { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 1.1em;}
         .support-footer a:hover { text-decoration: underline; }
@@ -81,8 +85,7 @@
 <body>
 
 <div class="container">
-    <!-- HIER KANNST DU DEIN TRABI-BILD EINFÜGEN! -->
-    <!-- <img src="trabi.png" alt="TrABI 2026" class="header-banner"> -->
+<img src="trabi.png" alt="TrABI 2026" class="header-banner"> 
 
     <h2><span>TrABI</span> 2026 Hoodie</h2>
     
@@ -90,97 +93,126 @@
         ℹ️ <strong>Wichtiger Hinweis:</strong> Diese Verkaufsaktion steht in keinerlei Verbindung zur Schule. Dies ist ein rein privates Projekt unseres Jahrgangs.
     </div>
 
-    <div class="step-indicator">
-        <div class="step-dot active" id="dot1"><div class="dot">1</div><div class="step-dot-text">Daten</div></div>
-        <div class="step-dot" id="dot2"><div class="dot">2</div><div class="step-dot-text">Größe</div></div>
-        <div class="step-dot" id="dot3"><div class="dot">3</div><div class="step-dot-text">Check</div></div>
+    <!-- NEU: Ampel System -->
+    <div class="traffic-box" id="trafficBox">
+        <div class="traffic-light">
+            <div class="light red" id="light-red"></div>
+            <div class="light yellow" id="light-yellow"></div>
+            <div class="light green" id="light-green"></div>
+        </div>
+        <div class="status-msg" id="statusMessage">Lade Status...</div>
     </div>
 
-    <form id="orderForm">
-        <input type="text" id="honeypot" class="hidden" autocomplete="off">
-
-        <!-- SCHRITT 1 -->
-        <div class="step active" id="step1">
-            <h3>Wer bestellt?</h3>
-            <label>Ich bin...*</label>
-            <select id="role" required>
-                <option value="Schüler">Schüler/in (55,00 €)</option>
-                <option value="Lehrer">Lehrer/in (25,00 €)</option>
-                <option value="Sonstige">Sonstige (55,00 €)</option>
-            </select>
-
-            <label>Vor- & Nachname*</label>
-            <input type="text" id="name" placeholder="Max Mustermann" required>
-            
-            <label>E-Mail Adresse*</label>
-            <input type="email" id="email" placeholder="max@beispiel.de" required>
-            
-            <button type="button" class="btn btn-primary" onclick="nextStep(2)">Produkte wählen ➔</button>
+    <div id="shopContent" class="hidden">
+        <div class="step-indicator">
+            <div class="step-dot active" id="dot1"><div class="dot">1</div><div class="step-dot-text">Daten</div></div>
+            <div class="step-dot" id="dot2"><div class="dot">2</div><div class="step-dot-text">Größe</div></div>
+            <div class="step-dot" id="dot3"><div class="dot">3</div><div class="step-dot-text">Check</div></div>
         </div>
 
-        <!-- SCHRITT 2 -->
-        <div class="step" id="step2">
-            <h3>Abschlusshoodie STU 2026</h3>
-            <div class="hoodie-grid">
-                <img src="https://via.placeholder.com/400x400?text=Hoodie+Front" class="hoodie-img" alt="Hoodie Front">
-                <img src="https://via.placeholder.com/400x400?text=Hoodie+Back" class="hoodie-img" alt="Hoodie Back">
-            </div>
-            <div class="model-hint">💡 Die abgebildete Person ist 1,83m groß und trägt Größe M (fällt leicht oversized aus).</div>
-            
-            <div id="sizes">
-                <div class="size-row"><span>Größe XS</span><input type="number" id="qtyXS" min="0" value="0"></div>
-                <div class="size-row"><span>Größe S</span><input type="number" id="qtyS" min="0" value="0"></div>
-                <div class="size-row"><span>Größe M</span><input type="number" id="qtyM" min="0" value="0"></div>
-                <div class="size-row"><span>Größe L</span><input type="number" id="qtyL" min="0" value="0"></div>
-                <div class="size-row"><span>Größe XL</span><input type="number" id="qtyXL" min="0" value="0"></div>
-                <div class="size-row"><span>Größe XXL</span><input type="number" id="qtyXXL" min="0" value="0"></div>
-            </div>
-            
-            <button type="button" class="btn btn-back" onclick="nextStep(1)">⬅ Zurück</button>
-            <button type="button" class="btn btn-primary" onclick="goToSummary()">Zusammenfassung prüfen ➔</button>
-        </div>
+        <form id="orderForm">
+            <input type="text" id="honeypot" class="hidden" autocomplete="off">
 
-        <!-- SCHRITT 3 -->
-        <div class="step" id="step3">
-            <h3>Übersicht & Bestätigung</h3>
-            <div id="summaryBox"></div>
-            
-            <div class="alert-text">
-                🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" löst du eine verbindliche Bestellung aus. 
-                Die Rechnung erhältst du danach sofort per E-Mail.
-            </div>
-            
-            <label class="checkbox-container">
-                <input type="checkbox" id="dsgvo" required>
-                <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
-            </label>
+            <!-- SCHRITT 1 -->
+            <div class="step active" id="step1">
+                <h3>Wer bestellt?</h3>
+                <label>Ich bin...*</label>
+                <select id="role" required>
+                    <option value="Schüler">Schüler/in (55,00 €)</option>
+                    <option value="Lehrer">Lehrer/in (25,00 €)</option>
+                    <option value="Sonstige">Sonstige (55,00 €)</option>
+                </select>
 
-            <button type="button" class="btn btn-back" style="margin-top: 15px;" onclick="nextStep(2)">⬅ Produkte anpassen</button>
-            <button type="submit" class="btn btn-success">✅ Kostenpflichtig bestellen</button>
-        </div>
-    </form>
+                <label>Vor- & Nachname*</label>
+                <input type="text" id="name" placeholder="Max Mustermann" required>
+                
+                <label>E-Mail Adresse*</label>
+                <input type="email" id="email" placeholder="max@beispiel.de" required>
+                
+                <button type="button" class="btn btn-primary" onclick="nextStep(2)">Produkte wählen ➔</button>
+            </div>
+
+            <!-- SCHRITT 2 -->
+            <div class="step" id="step2">
+                <h3>Abschlusshoodie STU 2026</h3>
+                <div class="hoodie-grid">
+                    <img src="assets/929EC312-9B58-4EAB-8F55-F9008C29976D_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Front">
+                    <img src="assets/F57861C4-A647-462E-AC1E-44D149B11DD3_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Back">
+                </div>
+                <div class="model-hint">💡 Die abgebildete Person ist 1,83m groß und trägt Größe M (fällt leicht oversized aus).</div>
+                
+                <div id="sizes">
+                    <div class="size-row"><span>Größe XS</span><input type="number" id="qtyXS" min="0" value="0"></div>
+                    <div class="size-row"><span>Größe S</span><input type="number" id="qtyS" min="0" value="0"></div>
+                    <div class="size-row"><span>Größe M</span><input type="number" id="qtyM" min="0" value="0"></div>
+                    <div class="size-row"><span>Größe L</span><input type="number" id="qtyL" min="0" value="0"></div>
+                    <div class="size-row"><span>Größe XL</span><input type="number" id="qtyXL" min="0" value="0"></div>
+                    <div class="size-row"><span>Größe XXL</span><input type="number" id="qtyXXL" min="0" value="0"></div>
+                </div>
+                
+                <button type="button" class="btn btn-back" onclick="nextStep(1)">⬅ Zurück</button>
+                <button type="button" class="btn btn-primary" onclick="goToSummary()">Zusammenfassung prüfen ➔</button>
+            </div>
+
+            <!-- SCHRITT 3 -->
+            <div class="step" id="step3">
+                <h3>Übersicht & Bestätigung</h3>
+                <div id="summaryBox"></div>
+                
+                <div class="alert-text">
+                    🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" löst du eine verbindliche Bestellung aus. 
+                    Die Rechnung erhältst du danach sofort per E-Mail.
+                </div>
+                
+                <label class="checkbox-container">
+                    <input type="checkbox" id="dsgvo" required>
+                    <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
+                </label>
+
+                <button type="button" class="btn btn-back" style="margin-top: 15px;" onclick="nextStep(2)">⬅ Produkte anpassen</button>
+                <button type="submit" class="btn btn-success">✅ Kostenpflichtig bestellen</button>
+            </div>
+        </form>
+    </div>
 </div>
 
-<!-- NEU: Der Footer für die Telefonnummer (wird dynamisch geladen) -->
 <div id="support-footer" class="support-footer hidden">
     Hast du Fragen zur Bestellung? Schreib uns per WhatsApp / SMS:<br>
     <a id="support-link" href="">Lade Nummer...</a>
 </div>
 
 <script>
-    // Lädt die Telefonnummer aus dem Backend, sobald die Seite offen ist
+    // Lädt die Ampel und die Telefonnummer direkt beim Start
     window.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch('/api/public-settings');
             const data = await res.json();
+            
+            // Ampel Logik
+            const statusMsg = document.getElementById('statusMessage');
+            if (data.shopStatus === 'geöffnet') {
+                document.getElementById('light-green').classList.add('active');
+                statusMsg.innerText = "Der Verkauf ist geöffnet!";
+                statusMsg.style.color = "#10b981";
+                document.getElementById('shopContent').classList.remove('hidden'); // Formular anzeigen
+            } else if (data.shopStatus === 'bald') {
+                document.getElementById('light-yellow').classList.add('active');
+                statusMsg.innerText = "Der Verkauf startet in Kürze!";
+                statusMsg.style.color = "#f59e0b";
+            } else {
+                document.getElementById('light-red').classList.add('active');
+                statusMsg.innerText = "Der Verkauf ist derzeit geschlossen.";
+                statusMsg.style.color = "#ef4444";
+            }
+
+            // Telefon Logik
             if (data.supportPhone && data.supportPhone.trim() !== "") {
                 const link = document.getElementById('support-link');
                 link.innerText = data.supportPhone;
-                // tel: Link erlaubt direktes anrufen/schreiben am Handy
                 link.href = `tel:${data.supportPhone.replace(/\s+/g, '')}`; 
                 document.getElementById('support-footer').classList.remove('hidden');
             }
-        } catch (e) { console.log("Keine Support-Nummer hinterlegt."); }
+        } catch (e) { console.log("Fehler beim Laden der Einstellungen."); }
     });
 
     function getPrice() {
@@ -260,12 +292,23 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
+            
             if(res.ok) {
+                const data = await res.json();
+                
+                // NEU: Success Screen zeigt die Rechnungs-ID riesig an
                 document.querySelector('.container').innerHTML = `
                     <div style="text-align: center; padding: 20px;">
                         <h2 style="color: #10b981; font-style: normal;">✅ Stark!</h2>
                         <h3 style="border: none;">Deine Bestellung war erfolgreich.</h3>
-                        <p style="color: #555;">Wir düsen los! Deine Rechnung wurde generiert und ist per E-Mail auf dem Weg zu dir.</p>
+                        
+                        <div style="background: #e0f2fe; border: 2px solid #bae6fd; padding: 20px; border-radius: 12px; margin: 25px 0;">
+                            <span style="font-size: 0.9em; color: #0369a1; font-weight: bold; text-transform: uppercase;">Deine Rechnungs-ID:</span><br>
+                            <strong style="font-size: 1.8em; color: #0284c7; letter-spacing: 1px;">${data.invoiceNumber}</strong>
+                        </div>
+                        
+                        <p style="color: #555; line-height: 1.6;">Wir düsen los! Deine Rechnung wurde im System generiert und ist per E-Mail auf dem Weg zu dir.<br>
+                        <em>(Bitte bewahre deine Rechnungs-ID für Rückfragen gut auf)</em></p>
                     </div>
                 `;
             } else {
