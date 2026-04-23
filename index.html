@@ -169,8 +169,8 @@
                 <h3>Übersicht & Bestätigung</h3>
                 <div id="summaryBox"></div>
                 <div class="alert-text">
-                    🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" löst du eine verbindliche Bestellung aus. 
-                    Die Rechnung erhältst du danach sofort per E-Mail.
+                    🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" lösen Sie eine verbindliche Bestellung aus. 
+                    Die Rechnung erhalten Sie danach sofort per E-Mail.
                 </div>
                 
                 <!-- NEU: Streng DSGVO-konformer Text -->
@@ -189,7 +189,7 @@
 <!-- DSGVO Footer (Support, Impressum, Datenschutz) -->
 <div class="legal-footer">
     <div id="support-footer" class="hidden" style="margin-bottom: 15px; font-size: 1.1em;">
-        Hast du Fragen zur Bestellung? <br>
+        Haben Sie Fragen zur Bestellung? <br>
         <a id="support-link" href="" style="color: var(--primary); font-weight: bold; border: none;">📞 Support kontaktieren</a>
     </div>
     <a onclick="openModal('modal-impressum')">Impressum</a> | 
@@ -216,11 +216,11 @@
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal('modal-datenschutz')">×</span>
         <h2>Datenschutzerklärung</h2>
-        <p><strong>1. Datenverarbeitung:</strong> Wir erheben und speichern deinen Namen und deine E-Mail-Adresse ausschließlich zur Abwicklung, Rechnungsstellung und Auslieferung der bestellten Hoodies (Art. 6 Abs. 1 lit. b DSGVO).</p>
+        <p><strong>1. Datenverarbeitung:</strong> Wir erheben und speichern Ihren Namen und Ihre E-Mail-Adresse ausschließlich zur Abwicklung, Rechnungsstellung und Auslieferung der bestellten Hoodies (Art. 6 Abs. 1 lit. b DSGVO).</p>
         <p><strong>2. Löschung:</strong> Sämtliche Daten (inklusive der Datenbank) werden spätestens 4 Wochen nach vollständiger Auslieferung und Bezahlung aller Hoodies restlos und unwiderruflich gelöscht.</p>
         <p><strong>3. Keine IP-Speicherung:</strong> Zur Gewährleistung der Datensicherheit werden bei der Bestellung keine IP-Adressen gespeichert. Der Live-Besucherzähler anonymisiert IP-Adressen mittels SHA-256 Hashing und löscht diese nach 2 Minuten automatisch.</p>
         <p><strong>4. Dienstleister:</strong> Zur sicheren technischen Bereitstellung nutzen wir die Dienste Vercel (Hosting), MongoDB (Datenbank) und Google (E-Mail Versand). Die Daten werden verschlüsselt übertragen (HTTPS).</p>
-        <p><strong>5. Rechte:</strong> Du hast jederzeit das Recht auf Auskunft, Berichtigung oder Löschung deiner Daten. Schreibe uns dazu einfach eine E-Mail.</p>
+        <p><strong>5. Rechte:</strong> Sie haben jederzeit das Recht auf Auskunft, Berichtigung oder Löschung Ihrer Daten. Schreiben Sie dazu einfach eine E-Mail.</p>
     </div>
 </div>
 
@@ -371,13 +371,13 @@
                 document.querySelector('.container').innerHTML = `
                     <div style="text-align: center; padding: 20px;">
                         <h2 style="color: #10b981; font-style: normal;">✅ Stark!</h2>
-                        <h3 style="border: none;">Deine Bestellung war erfolgreich.</h3>
+                        <h3 style="border: none;">Ihre Bestellung war erfolgreich.</h3>
                         <div style="background: #e0f2fe; border: 2px solid #bae6fd; padding: 20px; border-radius: 12px; margin: 25px 0;">
-                            <span style="font-size: 0.9em; color: #0369a1; font-weight: bold; text-transform: uppercase;">Deine Rechnungs-ID:</span><br>
+                            <span style="font-size: 0.9em; color: #0369a1; font-weight: bold; text-transform: uppercase;">Ihre Rechnungs-ID:</span><br>
                             <strong style="font-size: 1.8em; color: #0284c7; letter-spacing: 1px;">${data.invoiceNumber}</strong>
                         </div>
-                        <p style="color: #555; line-height: 1.6;">Wir düsen los! Deine Rechnung wurde im System generiert und ist per E-Mail auf dem Weg zu dir.<br>
-                        <em>(Bitte bewahre deine Rechnungs-ID für Rückfragen gut auf)</em></p>
+                        <p style="color: #555; line-height: 1.6;">Wir düsen los! Ihre Rechnung wurde im System generiert und ist per E-Mail auf dem Weg zu Ihnen.<br>
+                        <em>(Bitte bewahren Sie ihre Rechnungs-ID für Rückfragen gut auf)</em></p>
                     </div>
                 `;
             } else {
@@ -386,7 +386,7 @@
                 btn.disabled = false;
             }
         } catch(err) {
-            alert('Netzwerkfehler. Bitte überprüfe deine Internetverbindung.');
+            alert('Netzwerkfehler. Bitte überprüfen Sie ihre Internetverbindung.');
             btn.innerHTML = '✅ Kostenpflichtig bestellen';
             btn.disabled = false;
         }
