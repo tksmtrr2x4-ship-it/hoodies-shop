@@ -17,7 +17,6 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
                 auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
             });
 
-            // NEU: Mailtext mit Zahlungserklärung & Erinnerungs-Betreff
             const subjectText = isReminder ? `Erinnerung: Deine offene Rechnung ${order.invoiceNumber}` : `Ihre Rechnung ${order.invoiceNumber}`;
             
             let mailBody = `Hallo ${order.name},\n\n`;
@@ -45,8 +44,9 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
             catch (e) { reject(e); }
         });
 
-        // --- PDF LAYOUT ---
-        const invoiceDate = new Date().toLocaleDateString('de-DE');
+        // --- PDF LAYOUT (Fixierte Deutsche Zeit) ---
+        const invoiceDate = new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
+
         doc.fontSize(8).fillColor('#666666');
         doc.text(`${settings.issuerName} • ${settings.issuerStreet} • ${settings.issuerCity}`, 50, 40);
         doc.moveTo(50, 50).lineTo(200, 50).lineWidth(0.5).stroke('#cccccc');

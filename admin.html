@@ -48,7 +48,7 @@
     <div id="dashboard">
         <div class="header">
             <h2>Dashboard</h2>
-            <div class="live-badge" title="Besucher in den letzten 2 Minuten">
+            <div class="live-badge" title="DSGVO-konform verschlüsselte Besucher">
                 <div class="live-dot"></div> <span id="liveVisitorCount">0</span> Besucher Live
             </div>
         </div>
@@ -72,17 +72,24 @@
             <div id="settings" class="tab-content">
                 <h3>Shop Steuerung & Countdown</h3>
                 <div class="grid">
-                    <!-- Ampel & Countdown -->
                     <div style="grid-column: span 2; background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fde68a;">
                         <label style="color: #b45309; font-size: 1.1em;">🚦 Shop Status (Ampel)</label>
-                        <select id="set_status" style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
+                        <select id="set_status" style="font-weight: bold; font-size: 1.1em; margin-bottom: 15px;">
                             <option value="geöffnet">🟢 Geöffnet (Sofort bestellen möglich)</option>
-                            <option value="bald">🟡 Startet bald (Aktiviert den Countdown!)</option>
+                            <option value="bald">🟡 Startet bald (Aktiviert den Start-Countdown!)</option>
                             <option value="geschlossen">🔴 Geschlossen / Verkaufsstopp</option>
                         </select>
 
-                        <label style="color: #b45309;">Wann soll der Shop automatisch öffnen? (Gilt nur wenn Ampel auf Gelb steht!)</label>
-                        <input type="datetime-local" id="set_opening_date" style="width: 300px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <label style="color: #b45309;">Start-Countdown (Öffnet den Shop automatisch)</label>
+                                <input type="datetime-local" id="set_opening_date">
+                            </div>
+                            <div>
+                                <label style="color: #b45309;">End-Countdown (Schließt den Shop automatisch)</label>
+                                <input type="datetime-local" id="set_closing_date">
+                            </div>
+                        </div>
                     </div>
 
                     <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px;"></div>
@@ -120,11 +127,10 @@
                 document.getElementById('dashboard').style.display = 'block';
                 renderTable(await res.json());
                 loadSettings(); 
-                startLiveCounter(); // Startet den Ping zum Server
+                startLiveCounter(); 
             } else { alert('Falsche Zugangsdaten!'); }
         }
 
-        // --- Live Besucher Tracker (Alle 10 Sek) ---
         function startLiveCounter() {
             updateLiveCounter();
             setInterval(updateLiveCounter, 10000);
@@ -162,13 +168,19 @@
                 const d = new Date(s.openingDate);
                 document.getElementById('set_opening_date').value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
             }
+            if (s.closingDate) {
+                const d = new Date(s.closingDate);
+                document.getElementById('set_closing_date').value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+            }
         }
 
         async function saveSettings() {
-            const dateVal = document.getElementById('set_opening_date').value;
+            const openVal = document.getElementById('set_opening_date').value;
+            const closeVal = document.getElementById('set_closing_date').value;
             const payload = {
                 shopStatus: document.getElementById('set_status').value,
-                openingDate: dateVal ? new Date(dateVal).toISOString() : null,
+                openingDate: openVal ? new Date(openVal).toISOString() : null,
+                closingDate: closeVal ? new Date(closeVal).toISOString() : null,
                 issuerName: document.getElementById('set_name').value,
                 issuerEmail: document.getElementById('set_email').value,
                 issuerStreet: document.getElementById('set_street').value,
@@ -184,14 +196,14 @@
                 headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            alert('Einstellungen gespeichert! Countdown läuft nun, falls Ampel auf Gelb steht.');
+            alert('Einstellungen gespeichert! Der Countdown steuert den Shop nun automatisch.');
         }
 
         function renderTable(orders) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
             orders.forEach(o => {
-                const date = new Date(o.createdAt).toLocaleDateString('de-DE');
+                const date = new Date(o.createdAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute:'2-digit' });
                 const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
                 
                 let statusHtml = `<strong>${o.status}</strong>`;
@@ -207,7 +219,7 @@
                     for (let i = 0; i < qty; i++) {
                         tbody.innerHTML += `
                             <tr>
-                                <td class="searchable"><strong>${o.invoiceNumber}</strong><br><small>${date}</small></td>
+                                <td class="searchable"><strong>${o.invoiceNumber}</strong><br><small>${date} Uhr</small></td>
                                 <td class="searchable"><strong>${o.name}</strong> <span class="role-badge">${o.role}</span></td>
                                 <td><span class="size-badge">${size}</span></td>
                                 <td>${singlePrice.toFixed(2).replace('.', ',')} €</td>
