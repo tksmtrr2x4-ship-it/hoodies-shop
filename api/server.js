@@ -15,11 +15,11 @@ const connectDB = async () => {
 };
 
 // --- SCHEMA ---
-// 1. Bestellungen (Adresse entfernt, Rechnungsnummer hinzugefügt)
 const OrderSchema = new mongoose.Schema({
     invoiceNumber: String,
     name: String, 
     email: String,
+    role: String, // NEU: Schüler, Lehrer, Sonstige
     items: Object, 
     totalPrice: Number, 
     ipAddress: String,
@@ -28,7 +28,6 @@ const OrderSchema = new mongoose.Schema({
 });
 const Order = mongoose.model('Order', OrderSchema);
 
-// 2. Shop-Einstellungen (Für die Rechnung)
 const SettingsSchema = new mongoose.Schema({
     issuerName: { type: String, default: "Dein Name" },
     issuerStreet: { type: String, default: "Musterstraße 1" },
@@ -45,12 +44,14 @@ const Settings = mongoose.model('Settings', SettingsSchema);
 app.post('/api/order', async (req, res) => {
     try {
         await connectDB();
-        const { name, email, items, honeypot, dsgvo } = req.body;
+        const { name, email, role, items, honeypot, dsgvo } = req.body;
 
         if (honeypot) return res.status(400).send('Spam erkannt.');
         if (!dsgvo) return res.status(400).send('DSGVO muss akzeptiert werden.');
 
-        const pricePerItem = parseFloat(process.env.HOODIE_PRICE);
+        // Preiskalkulation anhand der Rolle
+        const pricePerItem = (role === 'Lehrer') ? 25.00 : 55.00;
+
         let totalQty = 0;
         for (let size in items) totalQty += items[size];
         if (totalQty === 0) return res.status(400).send('Keine Artikel ausgewählt.');
@@ -58,17 +59,15 @@ app.post('/api/order', async (req, res) => {
         const totalPrice = totalQty * pricePerItem;
         const ipAddress = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unbekannt';
 
-        // Fortlaufende Rechnungsnummer generieren
         const orderCount = await Order.countDocuments();
         const year = new Date().getFullYear();
         const invoiceNum = `RE-${year}-${String(orderCount + 1).padStart(3, '0')}`;
 
-        const newOrder = new Order({ invoiceNumber: invoiceNum, name, email, items, totalPrice, ipAddress });
+        const newOrder = new Order({ invoiceNumber: invoiceNum, name, email, role, items, totalPrice, ipAddress });
         await newOrder.save();
 
-        // Einstellungen für das PDF laden
         let settings = await Settings.findOne();
-        if (!settings) settings = await Settings.create({}); // Standardwerte beim ersten Mal
+        if (!settings) settings = await Settings.create({}); 
 
         await createInvoiceAndSendEmail(newOrder, pricePerItem, settings);
         res.status(200).json({ message: 'Bestellung erfolgreich', orderId: newOrder._id });
@@ -84,21 +83,18 @@ const adminAuth = basicAuth({
     challenge: false 
 });
 
-// Bestellungen laden
 app.get('/api/admin/orders', adminAuth, async (req, res) => {
     await connectDB();
     const orders = await Order.find().sort({ createdAt: -1 });
     res.json(orders);
 });
 
-// Bestellung als bezahlt markieren
 app.post('/api/admin/orders/:id/pay', adminAuth, async (req, res) => {
     await connectDB();
     await Order.findByIdAndUpdate(req.params.id, { status: 'bezahlt' });
     res.sendStatus(200);
 });
 
-// Einstellungen laden
 app.get('/api/admin/settings', adminAuth, async (req, res) => {
     await connectDB();
     let settings = await Settings.findOne();
@@ -106,18 +102,16 @@ app.get('/api/admin/settings', adminAuth, async (req, res) => {
     res.json(settings);
 });
 
-// Einstellungen speichern
 app.post('/api/admin/settings', adminAuth, async (req, res) => {
     await connectDB();
     await Settings.findOneAndUpdate({}, req.body, { upsert: true });
     res.sendStatus(200);
 });
 
-// CSV Export (Ohne Adresse)
 app.get('/api/admin/export', adminAuth, async (req, res) => {
     await connectDB();
     const orders = await Order.find().lean();
-    const fields =['invoiceNumber', 'name', 'email', 'totalPrice', 'status', 'ipAddress', 'createdAt'];
+    const fields =['invoiceNumber', 'name', 'role', 'email', 'totalPrice', 'status', 'ipAddress', 'createdAt'];
     const json2csvParser = new Parser({ fields });
     res.header('Content-Type', 'text/csv');
     res.attachment('bestellungen.csv');
