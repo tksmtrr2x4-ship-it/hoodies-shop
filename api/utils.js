@@ -2,9 +2,8 @@ const PDFDocument = require('pdfkit');
 const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
 
-async function createInvoiceAndSendEmail(order, pricePerItem, settings) {
+async function createInvoiceAndSendEmail(order, pricePerItem, settings, isReminder = false) {
     return new Promise(async (resolve, reject) => {
-        // Ränder stark verkleinert, damit alles auf eine Seite passt!
         const doc = new PDFDocument({ size: 'A4', margins: { top: 40, bottom: 30, left: 50, right: 50 } });
         let buffers =[];
         doc.on('data', buffers.push.bind(buffers));
@@ -18,11 +17,27 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings) {
                 auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
             });
 
+            // NEU: Mailtext mit Zahlungserklärung & Erinnerungs-Betreff
+            const subjectText = isReminder ? `Erinnerung: Deine offene Rechnung ${order.invoiceNumber}` : `Ihre Rechnung ${order.invoiceNumber}`;
+            
+            let mailBody = `Hallo ${order.name},\n\n`;
+            if (isReminder) {
+                mailBody += `Wir wollten dich kurz daran erinnern, dass die Zahlung für deine Bestellung noch aussteht. Im Anhang findest du deine Rechnung.\n\n`;
+            } else {
+                mailBody += `Vielen Dank für deine Bestellung! Im Anhang findest du deine Rechnung.\n\n`;
+            }
+
+            mailBody += `📱 SO KANNST DU BEZAHLEN:\n`;
+            mailBody += `1. GiroCode (Banking App): Öffne deine Banking-App, wähle "QR-Code scannen" (oder Foto-Überweisung) und scanne den linken QR-Code auf der Rechnung. Alle Überweisungsdaten sind direkt ausgefüllt.\n`;
+            mailBody += `2. PayPal: Scanne den rechten QR-Code einfach mit deiner Smartphone-Kamera oder der PayPal-App, um den genauen Betrag direkt und sicher an uns zu senden.\n\n`;
+            mailBody += `Natürlich kannst du den Betrag auch klassisch mit den Daten auf der Rechnung überweisen.\n\n`;
+            mailBody += `Viele Grüße,\n${settings.issuerName}`;
+
             let mailOptions = {
                 from: process.env.SMTP_USER,
                 to: order.email,
-                subject: `Ihre Rechnung ${order.invoiceNumber}`,
-                text: `Hallo ${order.name},\n\nvielen Dank für deine Bestellung! Im Anhang findest du deine Rechnung.\nBitte begleiche den Betrag innerhalb von ${settings.payDays} Tagen.\n\nViele Grüße,\n${settings.issuerName}`,
+                subject: subjectText,
+                text: mailBody,
                 attachments:[{ filename: `${order.invoiceNumber}.pdf`, content: pdfData }]
             };
 
@@ -32,30 +47,21 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings) {
 
         // --- PDF LAYOUT ---
         const invoiceDate = new Date().toLocaleDateString('de-DE');
-
-        // 1. Briefkopf
         doc.fontSize(8).fillColor('#666666');
         doc.text(`${settings.issuerName} • ${settings.issuerStreet} • ${settings.issuerCity}`, 50, 40);
         doc.moveTo(50, 50).lineTo(200, 50).lineWidth(0.5).stroke('#cccccc');
-
-        // 2. Empfänger
         doc.fontSize(11).fillColor('#000000');
         doc.text(order.name, 50, 70);
         doc.text(order.email, 50, 85);
-
-        // 3. Rechnungsdaten
         doc.fontSize(10);
         doc.text(`Rechnungsnummer:`, 350, 70);
         doc.text(order.invoiceNumber, 450, 70, { align: 'right' });
         doc.text(`Rechnungsdatum:`, 350, 85);
         doc.text(invoiceDate, 450, 85, { align: 'right' });
-
-        // 4. Titel
         doc.fontSize(18).font('Helvetica-Bold');
         doc.text(`Rechnung`, 50, 130);
         doc.font('Helvetica').fontSize(10);
-
-        // 5. Tabelle (Kompakter)
+        
         let startY = 160;
         doc.font('Helvetica-Bold');
         doc.text('Beschreibung', 50, startY);
@@ -63,29 +69,26 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings) {
         doc.text('Einzelpreis', 350, startY, { width: 80, align: 'right' });
         doc.text('Gesamt', 460, startY, { width: 80, align: 'right' });
         doc.moveTo(50, startY + 12).lineTo(540, startY + 12).lineWidth(1).stroke('#000000');
-
         doc.font('Helvetica');
         let currentY = startY + 20;
+        
         for (const[size, qty] of Object.entries(order.items)) {
             if (qty > 0) {
-                // Neuer Text hier:
                 doc.text(`Abschlusshoodie STU 2026 (Gr. ${size})`, 50, currentY);
                 doc.text(qty.toString(), 250, currentY, { width: 50, align: 'right' });
                 doc.text(`${pricePerItem.toFixed(2).replace('.', ',')} €`, 350, currentY, { width: 80, align: 'right' });
                 doc.text(`${(qty * pricePerItem).toFixed(2).replace('.', ',')} €`, 460, currentY, { width: 80, align: 'right' });
                 doc.moveTo(50, currentY + 12).lineTo(540, currentY + 12).lineWidth(0.5).stroke('#eeeeee');
-                currentY += 20; // Engerer Zeilenabstand (Vorher 25)
+                currentY += 20; 
             }
         }
-
-        // 6. Summe
+        
         currentY += 15;
         doc.font('Helvetica-Bold').fontSize(12);
         doc.text(`Rechnungsbetrag:`, 320, currentY);
         doc.text(`${order.totalPrice.toFixed(2).replace('.', ',')} €`, 460, currentY, { width: 80, align: 'right' });
         doc.moveTo(320, currentY - 5).lineTo(540, currentY - 5).lineWidth(1).stroke('#000000');
-
-        // 7. Rechtliche Hinweise & Zahlung
+        
         currentY += 35;
         doc.font('Helvetica').fontSize(10);
         let paymentText = `Bitte überweise den Betrag von ${order.totalPrice.toFixed(2).replace('.', ',')} € innerhalb von ${settings.payDays} Tagen.\n\n`;
@@ -95,7 +98,6 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings) {
         paymentText += `Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.`;
         doc.text(paymentText, 50, currentY, { width: 300 });
 
-        // 8. QR Codes (Exakt auf gleicher Höhe platziert)
         let qrX = 380;
         if (settings.issuerIban) {
             const cleanIban = settings.issuerIban.replace(/\s+/g, '');
@@ -115,10 +117,8 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings) {
             doc.text("PayPal", qrX, currentY + 60, { width: 60, align: 'center' });
         }
 
-        // 9. Footer (Fest verankert ganz unten, bricht keine neue Seite um)
         doc.fontSize(8).fillColor('#999999');
         doc.text(`Steuernummer / USt-IdNr.: ${settings.issuerTaxId}`, 50, 800, { align: 'center' });
-
         doc.end();
     });
 }

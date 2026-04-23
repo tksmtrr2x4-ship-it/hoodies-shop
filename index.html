@@ -27,7 +27,6 @@
 
         .disclaimer { background: #fdfae3; border-left: 4px solid #f0ad4e; color: #856404; padding: 12px; font-size: 0.85em; border-radius: 6px; margin-bottom: 25px; line-height: 1.4; }
 
-        /* NEU: Ampel Design */
         .traffic-box { text-align: center; margin-bottom: 25px; }
         .traffic-light { background: #222; padding: 12px; border-radius: 30px; display: inline-flex; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
         .light { width: 22px; height: 22px; border-radius: 50%; background: #444; box-shadow: inset 0 0 5px rgba(0,0,0,0.5); transition: all 0.4s ease; }
@@ -35,6 +34,12 @@
         .light.yellow.active { background: #f59e0b; box-shadow: 0 0 20px #f59e0b, inset 0 0 5px #fff; }
         .light.green.active { background: #10b981; box-shadow: 0 0 20px #10b981, inset 0 0 5px #fff; }
         .status-msg { font-size: 1.1em; font-weight: 800; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* NEU: Countdown Design */
+        .countdown-box { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
+        .cd-item { background: var(--secondary); color: white; padding: 10px 15px; border-radius: 8px; min-width: 50px; }
+        .cd-value { font-size: 1.8em; font-weight: 800; display: block; line-height: 1; }
+        .cd-label { font-size: 0.7em; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); }
 
         .step { display: none; animation: fadeIn 0.4s ease-in-out; }
         .step.active { display: block; }
@@ -85,7 +90,7 @@
 <body>
 
 <div class="container">
-<img src="assets/trabi.png" alt="TrABI 2026" class="header-banner"> 
+    <img src="assets/trabi.png" alt="TrABI 2026" class="header-banner">
 
     <h2><span>TrABI</span> 2026 Hoodie</h2>
     
@@ -93,7 +98,7 @@
         ℹ️ <strong>Wichtiger Hinweis:</strong> Diese Verkaufsaktion steht in keinerlei Verbindung zur Schule. Dies ist ein rein privates Projekt unseres Jahrgangs.
     </div>
 
-    <!-- NEU: Ampel System -->
+    <!-- Ampel & Countdown System -->
     <div class="traffic-box" id="trafficBox">
         <div class="traffic-light">
             <div class="light red" id="light-red"></div>
@@ -101,6 +106,14 @@
             <div class="light green" id="light-green"></div>
         </div>
         <div class="status-msg" id="statusMessage">Lade Status...</div>
+        
+        <!-- Live Countdown -->
+        <div id="countdown-wrapper" class="countdown-box hidden">
+            <div class="cd-item"><span class="cd-value" id="cd-days">00</span><span class="cd-label">Tage</span></div>
+            <div class="cd-item"><span class="cd-value" id="cd-hours">00</span><span class="cd-label">Std</span></div>
+            <div class="cd-item"><span class="cd-value" id="cd-mins">00</span><span class="cd-label">Min</span></div>
+            <div class="cd-item"><span class="cd-value" id="cd-secs">00</span><span class="cd-label">Sek</span></div>
+        </div>
     </div>
 
     <div id="shopContent" class="hidden">
@@ -113,7 +126,6 @@
         <form id="orderForm">
             <input type="text" id="honeypot" class="hidden" autocomplete="off">
 
-            <!-- SCHRITT 1 -->
             <div class="step active" id="step1">
                 <h3>Wer bestellt?</h3>
                 <label>Ich bin...*</label>
@@ -122,17 +134,13 @@
                     <option value="Lehrer">Lehrer/in (25,00 €)</option>
                     <option value="Sonstige">Sonstige (55,00 €)</option>
                 </select>
-
                 <label>Vor- & Nachname*</label>
                 <input type="text" id="name" placeholder="Max Mustermann" required>
-                
                 <label>E-Mail Adresse*</label>
                 <input type="email" id="email" placeholder="max@beispiel.de" required>
-                
                 <button type="button" class="btn btn-primary" onclick="nextStep(2)">Produkte wählen ➔</button>
             </div>
 
-            <!-- SCHRITT 2 -->
             <div class="step" id="step2">
                 <h3>Abschlusshoodie STU 2026</h3>
                 <div class="hoodie-grid">
@@ -154,21 +162,17 @@
                 <button type="button" class="btn btn-primary" onclick="goToSummary()">Zusammenfassung prüfen ➔</button>
             </div>
 
-            <!-- SCHRITT 3 -->
             <div class="step" id="step3">
                 <h3>Übersicht & Bestätigung</h3>
                 <div id="summaryBox"></div>
-                
                 <div class="alert-text">
                     🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" löst du eine verbindliche Bestellung aus. 
                     Die Rechnung erhältst du danach sofort per E-Mail.
                 </div>
-                
                 <label class="checkbox-container">
                     <input type="checkbox" id="dsgvo" required>
                     <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
                 </label>
-
                 <button type="button" class="btn btn-back" style="margin-top: 15px;" onclick="nextStep(2)">⬅ Produkte anpassen</button>
                 <button type="submit" class="btn btn-success">✅ Kostenpflichtig bestellen</button>
             </div>
@@ -182,55 +186,89 @@
 </div>
 
 <script>
-    // Lädt die Ampel und die Telefonnummer direkt beim Start
+    // --- LIVE TRACKING PING (Alle 15 Sekunden) ---
+    function pingServer() { fetch('/api/ping', { method: 'POST' }).catch(() => {}); }
+    pingServer(); setInterval(pingServer, 15000);
+
+    let countdownTimer;
+
     window.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch('/api/public-settings');
             const data = await res.json();
             
-            // Ampel Logik
             const statusMsg = document.getElementById('statusMessage');
+            
             if (data.shopStatus === 'geöffnet') {
-                document.getElementById('light-green').classList.add('active');
-                statusMsg.innerText = "Der Verkauf ist geöffnet!";
-                statusMsg.style.color = "#10b981";
-                document.getElementById('shopContent').classList.remove('hidden'); // Formular anzeigen
+                unlockShop("Der Verkauf ist geöffnet!");
             } else if (data.shopStatus === 'bald') {
                 document.getElementById('light-yellow').classList.add('active');
-                statusMsg.innerText = "Der Verkauf startet in Kürze!";
-                statusMsg.style.color = "#f59e0b";
+                
+                if (data.openingDate) {
+                    statusMsg.innerText = "Der Verkauf startet in:";
+                    statusMsg.style.color = "#f59e0b";
+                    startCountdown(data.openingDate);
+                } else {
+                    statusMsg.innerText = "Der Verkauf startet bald!";
+                    statusMsg.style.color = "#f59e0b";
+                }
             } else {
                 document.getElementById('light-red').classList.add('active');
                 statusMsg.innerText = "Der Verkauf ist derzeit geschlossen.";
                 statusMsg.style.color = "#ef4444";
             }
 
-            // Telefon Logik
             if (data.supportPhone && data.supportPhone.trim() !== "") {
                 const link = document.getElementById('support-link');
                 link.innerText = data.supportPhone;
                 link.href = `tel:${data.supportPhone.replace(/\s+/g, '')}`; 
                 document.getElementById('support-footer').classList.remove('hidden');
             }
-        } catch (e) { console.log("Fehler beim Laden der Einstellungen."); }
+        } catch (e) { console.log("Ladefehler"); }
     });
 
-    function getPrice() {
-        return document.getElementById('role').value === 'Lehrer' ? 25.00 : 55.00;
+    function unlockShop(msgText) {
+        document.querySelectorAll('.light').forEach(l => l.classList.remove('active'));
+        document.getElementById('light-green').classList.add('active');
+        const statusMsg = document.getElementById('statusMessage');
+        statusMsg.innerText = msgText;
+        statusMsg.style.color = "#10b981";
+        document.getElementById('countdown-wrapper').classList.add('hidden');
+        document.getElementById('shopContent').classList.remove('hidden');
     }
+
+    function startCountdown(openingDateStr) {
+        const openingTime = new Date(openingDateStr).getTime();
+        document.getElementById('countdown-wrapper').classList.remove('hidden');
+
+        countdownTimer = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = openingTime - now;
+
+            if (distance <= 0) {
+                clearInterval(countdownTimer);
+                unlockShop("Der Verkauf wurde soeben eröffnet!");
+                return;
+            }
+
+            document.getElementById('cd-days').innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            document.getElementById('cd-hours').innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            document.getElementById('cd-mins').innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            document.getElementById('cd-secs').innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }, 1000);
+    }
+
+    function getPrice() { return document.getElementById('role').value === 'Lehrer' ? 25.00 : 55.00; }
 
     function nextStep(step) {
         if(step === 2 && (!document.getElementById('name').value || !document.getElementById('email').checkValidity())) {
-            alert('Bitte fülle Name und E-Mail korrekt aus.');
-            return;
+            alert('Bitte fülle Name und E-Mail korrekt aus.'); return;
         }
         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
         document.getElementById('step' + step).classList.add('active');
 
         document.querySelectorAll('.step-dot').forEach(el => el.classList.remove('active'));
-        for(let i = 1; i <= step; i++) {
-            document.getElementById('dot' + i).classList.add('active');
-        }
+        for(let i = 1; i <= step; i++) { document.getElementById('dot' + i).classList.add('active'); }
     }
 
     function goToSummary() {
@@ -242,10 +280,7 @@
         const xxl = parseInt(document.getElementById('qtyXXL').value) || 0;
         const totalQty = xs + s + m + l + xl + xxl;
 
-        if(totalQty === 0) { 
-            alert('Bitte wähle mindestens einen Hoodie aus.'); 
-            return; 
-        }
+        if(totalQty === 0) { alert('Bitte wähle mindestens einen Hoodie aus.'); return; }
 
         const currentPrice = getPrice();
 
@@ -287,33 +322,24 @@
         btn.disabled = true;
 
         try {
-            const res = await fetch('/api/order', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const res = await fetch('/api/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             
             if(res.ok) {
                 const data = await res.json();
-                
-                // NEU: Success Screen zeigt die Rechnungs-ID riesig an
                 document.querySelector('.container').innerHTML = `
                     <div style="text-align: center; padding: 20px;">
                         <h2 style="color: #10b981; font-style: normal;">✅ Stark!</h2>
                         <h3 style="border: none;">Deine Bestellung war erfolgreich.</h3>
-                        
                         <div style="background: #e0f2fe; border: 2px solid #bae6fd; padding: 20px; border-radius: 12px; margin: 25px 0;">
                             <span style="font-size: 0.9em; color: #0369a1; font-weight: bold; text-transform: uppercase;">Deine Rechnungs-ID:</span><br>
                             <strong style="font-size: 1.8em; color: #0284c7; letter-spacing: 1px;">${data.invoiceNumber}</strong>
                         </div>
-                        
                         <p style="color: #555; line-height: 1.6;">Wir düsen los! Deine Rechnung wurde im System generiert und ist per E-Mail auf dem Weg zu dir.<br>
                         <em>(Bitte bewahre deine Rechnungs-ID für Rückfragen gut auf)</em></p>
                     </div>
                 `;
             } else {
-                const text = await res.text();
-                alert('Fehler: ' + text);
+                alert('Fehler: ' + await res.text());
                 btn.innerHTML = '✅ Kostenpflichtig bestellen';
                 btn.disabled = false;
             }

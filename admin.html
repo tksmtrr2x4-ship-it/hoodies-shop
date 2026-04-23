@@ -5,14 +5,22 @@
     <title>Admin Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; margin: 0;}
-        .container { background: white; padding: 20px; border-radius: 8px; max-width: 1200px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; max-width: 1300px; margin: auto; padding-bottom: 20px;}
+        .live-badge { background: #10b981; color: white; padding: 8px 15px; border-radius: 30px; font-weight: bold; display: flex; align-items: center; gap: 8px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);}
+        .live-dot { width: 10px; height: 10px; background: white; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(0.9); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+
+        .container { background: white; padding: 20px; border-radius: 8px; max-width: 1300px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; vertical-align: middle;}
         th { background: #000; color: white; }
-        .btn { padding: 8px 12px; cursor: pointer; border: none; background: #000; color: white; border-radius: 4px; }
+        
+        .btn { padding: 6px 10px; cursor: pointer; border: none; background: #000; color: white; border-radius: 4px; font-size: 0.9em;}
         .btn-green { background: #28a745; }
-        .btn-red { background: #dc3545; margin-left: 5px; }
-        .btn-red:hover { background: #c82333; }
+        .btn-red { background: #dc3545; }
+        .btn-blue { background: #0284c7; }
+        .btn:hover { opacity: 0.8; }
+        
         #loginScreen { text-align: center; margin-top: 100px; }
         #dashboard { display: none; }
         .tabs { display: flex; gap: 10px; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
@@ -25,6 +33,7 @@
         label { font-size: 0.85em; font-weight: bold; margin-bottom: 5px; display: block;}
         .role-badge { background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 5px; }
         .size-badge { background: #00AEEF; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 1.1em; }
+        .remind-badge { background: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -36,55 +45,67 @@
         <button class="btn" onclick="login()">Einloggen</button>
     </div>
 
-    <div id="dashboard" class="container">
-        <div class="tabs">
-            <div class="tab active" onclick="switchTab('orders')">📦 Bestellungen</div>
-            <div class="tab" onclick="switchTab('settings')">⚙️ Einstellungen & Ampel</div>
-        </div>
-
-        <div id="orders" class="tab-content active">
-            <button class="btn" onclick="exportCSV()">CSV Exportieren (Druckfertig)</button>
-            <input type="text" id="search" placeholder="Suche nach Name oder RE-Nr..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
-            
-            <table>
-                <thead><tr><th>Rechnungs-ID</th><th>Kunde</th><th>Größe</th><th>Einzelbetrag</th><th>Status</th><th style="min-width: 140px;">Aktion (Gilt für ganze Bestellung)</th></tr></thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
-
-        <div id="settings" class="tab-content">
-            <h3>Shop Steuerung & Rechnungsdaten</h3>
-            <div class="grid">
-                <!-- NEU: Ampel Steuerung -->
-                <div style="grid-column: span 2; background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fde68a;">
-                    <label style="color: #b45309; font-size: 1.1em;">🚦 Shop Status (Ampel)</label>
-                    <select id="set_status" style="font-weight: bold; font-size: 1.1em;">
-                        <option value="geöffnet">🟢 Geöffnet (Kunden können bestellen)</option>
-                        <option value="bald">🟡 Startet bald (Formular gesperrt)</option>
-                        <option value="geschlossen">🔴 Geschlossen / Verkaufsstopp (Formular gesperrt)</option>
-                    </select>
-                </div>
-
-                <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px;"></div>
-
-                <div><label>Dein Firmenname / Absendername</label><input type="text" id="set_name"></div>
-                <div><label>E-Mail Absender</label><input type="text" id="set_email"></div>
-                <div><label>Straße & Hausnummer</label><input type="text" id="set_street"></div>
-                <div><label>PLZ & Ort</label><input type="text" id="set_city"></div>
-                <div><label>Steuernummer (Falls keine, "Keine" eintragen)</label><input type="text" id="set_tax"></div>
-                <div><label>Zahlungsziel (Tage)</label><input type="number" id="set_days"></div>
-                
-                <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px;"></div>
-                
-                <div><label>IBAN (Generiert den GiroCode)</label><input type="text" id="set_iban"></div>
-                <div><label>PayPal E-Mail (Generiert den PP-Code)</label><input type="text" id="set_paypal"></div>
-                
-                <div style="grid-column: span 2; background: #e0f2fe; padding: 15px; border-radius: 8px;">
-                    <label style="color: #0369a1;">📞 Support-Telefonnummer (Öffentlich)</label>
-                    <input type="text" id="set_phone" placeholder="z.B. +49 151 12345678">
-                </div>
+    <div id="dashboard">
+        <div class="header">
+            <h2>Dashboard</h2>
+            <div class="live-badge" title="Besucher in den letzten 2 Minuten">
+                <div class="live-dot"></div> <span id="liveVisitorCount">0</span> Besucher Live
             </div>
-            <button class="btn btn-green" onclick="saveSettings()">Einstellungen speichern</button>
+        </div>
+
+        <div class="container">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('orders')">📦 Bestellungen</div>
+                <div class="tab" onclick="switchTab('settings')">⚙️ Einstellungen & Shop-Start</div>
+            </div>
+
+            <div id="orders" class="tab-content active">
+                <button class="btn" onclick="exportCSV()">CSV Exportieren</button>
+                <input type="text" id="search" placeholder="Suche nach Name oder RE-Nr..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
+                
+                <table>
+                    <thead><tr><th>Rechnungs-ID</th><th>Kunde</th><th>Größe</th><th>Einzelbetrag</th><th>Status & Erinnerung</th><th style="min-width: 180px;">Aktionen</th></tr></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <div id="settings" class="tab-content">
+                <h3>Shop Steuerung & Countdown</h3>
+                <div class="grid">
+                    <!-- Ampel & Countdown -->
+                    <div style="grid-column: span 2; background: #fffbeb; padding: 15px; border-radius: 8px; border: 1px solid #fde68a;">
+                        <label style="color: #b45309; font-size: 1.1em;">🚦 Shop Status (Ampel)</label>
+                        <select id="set_status" style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
+                            <option value="geöffnet">🟢 Geöffnet (Sofort bestellen möglich)</option>
+                            <option value="bald">🟡 Startet bald (Aktiviert den Countdown!)</option>
+                            <option value="geschlossen">🔴 Geschlossen / Verkaufsstopp</option>
+                        </select>
+
+                        <label style="color: #b45309;">Wann soll der Shop automatisch öffnen? (Gilt nur wenn Ampel auf Gelb steht!)</label>
+                        <input type="datetime-local" id="set_opening_date" style="width: 300px;">
+                    </div>
+
+                    <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px;"></div>
+
+                    <div><label>Dein Firmenname / Absendername</label><input type="text" id="set_name"></div>
+                    <div><label>E-Mail Absender</label><input type="text" id="set_email"></div>
+                    <div><label>Straße & Hausnummer</label><input type="text" id="set_street"></div>
+                    <div><label>PLZ & Ort</label><input type="text" id="set_city"></div>
+                    <div><label>Steuernummer (Falls keine, "Keine" eintragen)</label><input type="text" id="set_tax"></div>
+                    <div><label>Zahlungsziel (Tage)</label><input type="number" id="set_days"></div>
+                    
+                    <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px;"></div>
+                    
+                    <div><label>IBAN (Generiert den GiroCode)</label><input type="text" id="set_iban"></div>
+                    <div><label>PayPal E-Mail (Generiert den PP-Code)</label><input type="text" id="set_paypal"></div>
+                    
+                    <div style="grid-column: span 2; background: #e0f2fe; padding: 15px; border-radius: 8px;">
+                        <label style="color: #0369a1;">📞 Support-Telefonnummer (Öffentlich)</label>
+                        <input type="text" id="set_phone" placeholder="z.B. +49 151 12345678">
+                    </div>
+                </div>
+                <button class="btn btn-green" onclick="saveSettings()" style="padding: 15px 25px; font-size: 1.1em;">Einstellungen speichern</button>
+            </div>
         </div>
     </div>
 
@@ -94,13 +115,26 @@
         async function login() {
             authHeader = 'Basic ' + btoa(document.getElementById('user').value + ':' + document.getElementById('pass').value);
             const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
-            
             if(res.ok) {
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
                 renderTable(await res.json());
                 loadSettings(); 
+                startLiveCounter(); // Startet den Ping zum Server
             } else { alert('Falsche Zugangsdaten!'); }
+        }
+
+        // --- Live Besucher Tracker (Alle 10 Sek) ---
+        function startLiveCounter() {
+            updateLiveCounter();
+            setInterval(updateLiveCounter, 10000);
+        }
+        async function updateLiveCounter() {
+            try {
+                const res = await fetch('/api/admin/visitors', { headers: { 'Authorization': authHeader } });
+                const data = await res.json();
+                document.getElementById('liveVisitorCount').innerText = data.count;
+            } catch(e) {}
         }
 
         function switchTab(tabId) {
@@ -123,11 +157,18 @@
             document.getElementById('set_paypal').value = s.issuerPayPal || '';
             document.getElementById('set_days').value = s.payDays || 14;
             document.getElementById('set_phone').value = s.supportPhone || '';
+            
+            if (s.openingDate) {
+                const d = new Date(s.openingDate);
+                document.getElementById('set_opening_date').value = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0,16);
+            }
         }
 
         async function saveSettings() {
+            const dateVal = document.getElementById('set_opening_date').value;
             const payload = {
                 shopStatus: document.getElementById('set_status').value,
+                openingDate: dateVal ? new Date(dateVal).toISOString() : null,
                 issuerName: document.getElementById('set_name').value,
                 issuerEmail: document.getElementById('set_email').value,
                 issuerStreet: document.getElementById('set_street').value,
@@ -143,10 +184,9 @@
                 headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            alert('Einstellungen erfolgreich gespeichert!');
+            alert('Einstellungen gespeichert! Countdown läuft nun, falls Ampel auf Gelb steht.');
         }
 
-        // NEU: Tabelle zerlegt Bestellungen in Einzel-Hoodies
         function renderTable(orders) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
@@ -154,12 +194,16 @@
                 const date = new Date(o.createdAt).toLocaleDateString('de-DE');
                 const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
                 
-                let btnPay = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')">✔ Bezahlt</button>` : 'Bezahlt';
-                let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Bestellung löschen">🗑️</button>`;
+                let statusHtml = `<strong>${o.status}</strong>`;
+                if(o.status === 'offen' && o.reminderCount > 0) {
+                    statusHtml += `<br><span class="remind-badge">${o.reminderCount}x erinnert</span>`;
+                }
 
-                // Schleife durch alle Größen
+                let btnPay = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')" title="Bezahlt">✔</button>` : '';
+                let btnRemind = o.status === 'offen' ? `<button class="btn btn-blue" onclick="remindOrder('${o._id}')" title="Erinnerung senden">🔔</button>` : '';
+                let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Löschen">🗑️</button>`;
+
                 for (const [size, qty] of Object.entries(o.items)) {
-                    // Schleife durch die Anzahl einer Größe (z.B. qty: 2 -> zwei Zeilen erzeugen)
                     for (let i = 0; i < qty; i++) {
                         tbody.innerHTML += `
                             <tr>
@@ -167,8 +211,8 @@
                                 <td class="searchable"><strong>${o.name}</strong> <span class="role-badge">${o.role}</span></td>
                                 <td><span class="size-badge">${size}</span></td>
                                 <td>${singlePrice.toFixed(2).replace('.', ',')} €</td>
-                                <td><strong>${o.status}</strong></td>
-                                <td>${btnPay} ${btnDel}</td>
+                                <td>${statusHtml}</td>
+                                <td><div style="display:flex; gap:5px;">${btnPay} ${btnRemind} ${btnDel}</div></td>
                             </tr>`;
                     }
                 }
@@ -176,8 +220,17 @@
         }
 
         async function markPaid(id) {
-            if(confirm('Zahlungseingang für die gesamte Rechnung bestätigt?')) {
+            if(confirm('Zahlungseingang bestätigen?')) {
                 await fetch(`/api/admin/orders/${id}/pay`, { method: 'POST', headers: { 'Authorization': authHeader } });
+                const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
+                renderTable(await res.json());
+            }
+        }
+
+        async function remindOrder(id) {
+            if(confirm('Möchtest du diesem Kunden eine Zahlungserinnerung inkl. neuer PDF per Mail senden?')) {
+                await fetch(`/api/admin/orders/${id}/remind`, { method: 'POST', headers: { 'Authorization': authHeader } });
+                alert('Erinnerung wurde erfolgreich versendet!');
                 const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
                 renderTable(await res.json());
             }
