@@ -5,12 +5,14 @@
     <title>Admin Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; margin: 0;}
-        .container { background: white; padding: 20px; border-radius: 8px; max-width: 1100px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .container { background: white; padding: 20px; border-radius: 8px; max-width: 1200px; margin: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9em; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #000; color: white; }
         .btn { padding: 8px 12px; cursor: pointer; border: none; background: #000; color: white; border-radius: 4px; }
         .btn-green { background: #28a745; }
+        .btn-red { background: #dc3545; margin-left: 5px; }
+        .btn-red:hover { background: #c82333; }
         #loginScreen { text-align: center; margin-top: 100px; }
         #dashboard { display: none; }
         .tabs { display: flex; gap: 10px; border-bottom: 2px solid #ddd; margin-bottom: 20px; }
@@ -41,16 +43,16 @@
 
         <div id="orders" class="tab-content active">
             <button class="btn" onclick="exportCSV()">CSV Exportieren</button>
-            <input type="text" id="search" placeholder="Suche..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
+            <input type="text" id="search" placeholder="Suche nach Name..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
             
             <table>
-                <thead><tr><th>RE-Nr. & Datum</th><th>Kunde</th><th>Produkte</th><th>Betrag</th><th>Status</th><th>Aktion</th></tr></thead>
+                <thead><tr><th>RE-Nr. & Datum</th><th>Kunde</th><th>Produkte</th><th>Betrag</th><th>Status</th><th style="min-width: 140px;">Aktion</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
         </div>
 
         <div id="settings" class="tab-content">
-            <h3>Daten für die automatische PDF-Rechnung</h3>
+            <h3>Daten für die automatische PDF-Rechnung & Support</h3>
             <div class="grid">
                 <div><label>Dein Firmenname / Absendername</label><input type="text" id="set_name"></div>
                 <div><label>E-Mail Absender</label><input type="text" id="set_email"></div>
@@ -58,9 +60,17 @@
                 <div><label>PLZ & Ort</label><input type="text" id="set_city"></div>
                 <div><label>Steuernummer (Falls keine, "Keine" eintragen)</label><input type="text" id="set_tax"></div>
                 <div><label>Zahlungsziel (Tage)</label><input type="number" id="set_days"></div>
+                
                 <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px;"></div>
+                
                 <div><label>IBAN (Generiert den GiroCode)</label><input type="text" id="set_iban"></div>
                 <div><label>PayPal E-Mail (Generiert den PP-Code)</label><input type="text" id="set_paypal"></div>
+                
+                <!-- NEU: Telefonnummer -->
+                <div style="grid-column: span 2; background: #e0f2fe; padding: 15px; border-radius: 8px;">
+                    <label style="color: #0369a1;">📞 Support-Telefonnummer (Wird öffentlich auf der Bestellseite angezeigt!)</label>
+                    <input type="text" id="set_phone" placeholder="z.B. +49 151 12345678">
+                </div>
             </div>
             <button class="btn btn-green" onclick="saveSettings()">Einstellungen speichern</button>
         </div>
@@ -99,6 +109,7 @@
             document.getElementById('set_iban').value = s.issuerIban || '';
             document.getElementById('set_paypal').value = s.issuerPayPal || '';
             document.getElementById('set_days').value = s.payDays || 14;
+            document.getElementById('set_phone').value = s.supportPhone || ''; // Laden
         }
 
         async function saveSettings() {
@@ -110,14 +121,15 @@
                 issuerTaxId: document.getElementById('set_tax').value,
                 issuerIban: document.getElementById('set_iban').value,
                 issuerPayPal: document.getElementById('set_paypal').value,
-                payDays: parseInt(document.getElementById('set_days').value)
+                payDays: parseInt(document.getElementById('set_days').value),
+                supportPhone: document.getElementById('set_phone').value // Speichern
             };
             await fetch('/api/admin/settings', {
                 method: 'POST',
                 headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            alert('Rechnungseinstellungen gespeichert!');
+            alert('Einstellungen erfolgreich gespeichert!');
         }
 
         function renderTable(orders) {
@@ -126,7 +138,9 @@
             orders.forEach(o => {
                 const date = new Date(o.createdAt).toLocaleDateString('de-DE');
                 let itemsStr = Object.entries(o.items).filter(i => i[1]>0).map(i => `${i[1]}x Gr. ${i[0]}`).join('<br>');
-                let btn = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')">✔ Bezahlt</button>` : 'Bezahlt';
+                
+                let btnPay = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')">✔ Bezahlt</button>` : 'Bezahlt';
+                let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Bestellung löschen">🗑️</button>`;
 
                 tbody.innerHTML += `
                     <tr>
@@ -135,7 +149,7 @@
                         <td>${itemsStr}</td>
                         <td>${o.totalPrice.toFixed(2).replace('.', ',')} €</td>
                         <td><strong>${o.status}</strong></td>
-                        <td>${btn}</td>
+                        <td>${btnPay} ${btnDel}</td>
                     </tr>`;
             });
         }
@@ -143,6 +157,15 @@
         async function markPaid(id) {
             if(confirm('Zahlungseingang bestätigt?')) {
                 await fetch(`/api/admin/orders/${id}/pay`, { method: 'POST', headers: { 'Authorization': authHeader } });
+                const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
+                renderTable(await res.json());
+            }
+        }
+
+        // NEU: LÖSCHEN LOGIK
+        async function deleteOrder(id) {
+            if(confirm('ACHTUNG: Möchtest du diese Bestellung wirklich unwiderruflich löschen?')) {
+                await fetch(`/api/admin/orders/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
                 const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
                 renderTable(await res.json());
             }

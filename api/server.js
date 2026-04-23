@@ -19,7 +19,7 @@ const OrderSchema = new mongoose.Schema({
     invoiceNumber: String,
     name: String, 
     email: String,
-    role: String, // NEU: Schüler, Lehrer, Sonstige
+    role: String, 
     items: Object, 
     totalPrice: Number, 
     ipAddress: String,
@@ -36,9 +36,21 @@ const SettingsSchema = new mongoose.Schema({
     issuerTaxId: { type: String, default: "none" },
     issuerIban: { type: String, default: "" },
     issuerPayPal: { type: String, default: "" },
-    payDays: { type: Number, default: 14 }
+    payDays: { type: Number, default: 14 },
+    supportPhone: { type: String, default: "" } // NEU: Telefonnummer
 });
 const Settings = mongoose.model('Settings', SettingsSchema);
+
+// --- ÖFFENTLICHE API (Für die Anzeige der Telefonnummer) ---
+app.get('/api/public-settings', async (req, res) => {
+    try {
+        await connectDB();
+        let settings = await Settings.findOne();
+        res.json({ supportPhone: settings ? settings.supportPhone : "" });
+    } catch (e) {
+        res.json({ supportPhone: "" });
+    }
+});
 
 // --- KUNDEN API ---
 app.post('/api/order', async (req, res) => {
@@ -49,7 +61,6 @@ app.post('/api/order', async (req, res) => {
         if (honeypot) return res.status(400).send('Spam erkannt.');
         if (!dsgvo) return res.status(400).send('DSGVO muss akzeptiert werden.');
 
-        // Preiskalkulation anhand der Rolle
         const pricePerItem = (role === 'Lehrer') ? 25.00 : 55.00;
 
         let totalQty = 0;
@@ -92,6 +103,13 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
 app.post('/api/admin/orders/:id/pay', adminAuth, async (req, res) => {
     await connectDB();
     await Order.findByIdAndUpdate(req.params.id, { status: 'bezahlt' });
+    res.sendStatus(200);
+});
+
+// NEU: Bestellung löschen
+app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
+    await connectDB();
+    await Order.findByIdAndDelete(req.params.id);
     res.sendStatus(200);
 });
 

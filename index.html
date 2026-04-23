@@ -8,7 +8,6 @@
     
     <style>
         :root {
-            var(--primary): #00AEEF; 
             --primary: #00AEEF;
             --primary-dark: #008Cbf;
             --secondary: #1a1b26; 
@@ -18,7 +17,7 @@
             --border: #e2e8f0;
         }
 
-        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .container { max-width: 650px; width: 100%; background: var(--card-bg); padding: 35px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); box-sizing: border-box; border-top: 6px solid var(--primary); }
 
         .header-banner { width: 100%; max-height: 250px; object-fit: contain; margin-bottom: 10px; }
@@ -26,7 +25,6 @@
         h2 span { color: var(--primary); }
         h3 { font-weight: 600; border-bottom: 2px solid var(--border); padding-bottom: 10px; margin-top: 0; }
 
-        /* Der Schul-Hinweis */
         .disclaimer { background: #fdfae3; border-left: 4px solid #f0ad4e; color: #856404; padding: 12px; font-size: 0.85em; border-radius: 6px; margin-bottom: 25px; line-height: 1.4; }
 
         .step { display: none; animation: fadeIn 0.4s ease-in-out; }
@@ -73,6 +71,11 @@
         .checkbox-container input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--primary); cursor: pointer; }
         .checkbox-container span { font-size: 0.85em; line-height: 1.4; color: #555; }
         .hidden { display: none !important; }
+
+        /* NEU: Support Footer Design */
+        .support-footer { text-align: center; margin-top: 25px; font-size: 0.85em; color: #666; width: 100%; }
+        .support-footer a { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 1.1em;}
+        .support-footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -87,7 +90,6 @@
         ℹ️ <strong>Wichtiger Hinweis:</strong> Diese Verkaufsaktion steht in keinerlei Verbindung zur Schule. Dies ist ein rein privates Projekt unseres Jahrgangs.
     </div>
 
-    <!-- Fortschrittsanzeige -->
     <div class="step-indicator">
         <div class="step-dot active" id="dot1"><div class="dot">1</div><div class="step-dot-text">Daten</div></div>
         <div class="step-dot" id="dot2"><div class="dot">2</div><div class="step-dot-text">Größe</div></div>
@@ -97,7 +99,7 @@
     <form id="orderForm">
         <input type="text" id="honeypot" class="hidden" autocomplete="off">
 
-        <!-- SCHRITT 1: Kundendaten & Rolle -->
+        <!-- SCHRITT 1 -->
         <div class="step active" id="step1">
             <h3>Wer bestellt?</h3>
             <label>Ich bin...*</label>
@@ -116,7 +118,7 @@
             <button type="button" class="btn btn-primary" onclick="nextStep(2)">Produkte wählen ➔</button>
         </div>
 
-        <!-- SCHRITT 2: Produkte -->
+        <!-- SCHRITT 2 -->
         <div class="step" id="step2">
             <h3>Abschlusshoodie STU 2026</h3>
             <div class="hoodie-grid">
@@ -138,7 +140,7 @@
             <button type="button" class="btn btn-primary" onclick="goToSummary()">Zusammenfassung prüfen ➔</button>
         </div>
 
-        <!-- SCHRITT 3: Bestätigung -->
+        <!-- SCHRITT 3 -->
         <div class="step" id="step3">
             <h3>Übersicht & Bestätigung</h3>
             <div id="summaryBox"></div>
@@ -159,8 +161,28 @@
     </form>
 </div>
 
+<!-- NEU: Der Footer für die Telefonnummer (wird dynamisch geladen) -->
+<div id="support-footer" class="support-footer hidden">
+    Hast du Fragen zur Bestellung? Schreib uns per WhatsApp / SMS:<br>
+    <a id="support-link" href="">Lade Nummer...</a>
+</div>
+
 <script>
-    // Preis dynamisch nach Rolle berechnen
+    // Lädt die Telefonnummer aus dem Backend, sobald die Seite offen ist
+    window.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const res = await fetch('/api/public-settings');
+            const data = await res.json();
+            if (data.supportPhone && data.supportPhone.trim() !== "") {
+                const link = document.getElementById('support-link');
+                link.innerText = data.supportPhone;
+                // tel: Link erlaubt direktes anrufen/schreiben am Handy
+                link.href = `tel:${data.supportPhone.replace(/\s+/g, '')}`; 
+                document.getElementById('support-footer').classList.remove('hidden');
+            }
+        } catch (e) { console.log("Keine Support-Nummer hinterlegt."); }
+    });
+
     function getPrice() {
         return document.getElementById('role').value === 'Lehrer' ? 25.00 : 55.00;
     }
