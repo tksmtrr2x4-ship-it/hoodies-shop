@@ -35,7 +35,6 @@
         .light.green.active { background: #10b981; box-shadow: 0 0 20px #10b981, inset 0 0 5px #fff; }
         .status-msg { font-size: 1.1em; font-weight: 800; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* NEU: Countdown Design */
         .countdown-box { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
         .cd-item { background: var(--secondary); color: white; padding: 10px 15px; border-radius: 8px; min-width: 50px; }
         .cd-value { font-size: 1.8em; font-weight: 800; display: block; line-height: 1; }
@@ -82,15 +81,21 @@
         .checkbox-container span { font-size: 0.85em; line-height: 1.4; color: #555; }
         .hidden { display: none !important; }
 
-        .support-footer { text-align: center; margin-top: 25px; font-size: 0.85em; color: #666; width: 100%; }
-        .support-footer a { color: var(--primary); text-decoration: none; font-weight: 600; font-size: 1.1em;}
-        .support-footer a:hover { text-decoration: underline; }
+        /* DSGVO Footer & Modals */
+        .legal-footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #888; width: 100%; }
+        .legal-footer a { color: #555; text-decoration: none; margin: 0 10px; cursor: pointer; border-bottom: 1px dotted #888; transition: color 0.2s;}
+        .legal-footer a:hover { color: var(--primary); }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5em; cursor: pointer; color: #888; }
+        .close-modal:hover { color: #000; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <img src="assets/trabi.png" alt="TrABI 2026" class="header-banner">
+    <!-- <img src="trabi.png" alt="TrABI 2026" class="header-banner"> -->
 
     <h2><span>TrABI</span> 2026 Hoodie</h2>
     
@@ -98,7 +103,6 @@
         ℹ️ <strong>Wichtiger Hinweis:</strong> Diese Verkaufsaktion steht in keinerlei Verbindung zur Schule. Dies ist ein rein privates Projekt unseres Jahrgangs.
     </div>
 
-    <!-- Ampel & Countdown System -->
     <div class="traffic-box" id="trafficBox">
         <div class="traffic-light">
             <div class="light red" id="light-red"></div>
@@ -107,7 +111,6 @@
         </div>
         <div class="status-msg" id="statusMessage">Lade Status...</div>
         
-        <!-- Live Countdown -->
         <div id="countdown-wrapper" class="countdown-box hidden">
             <div class="cd-item"><span class="cd-value" id="cd-days">00</span><span class="cd-label">Tage</span></div>
             <div class="cd-item"><span class="cd-value" id="cd-hours">00</span><span class="cd-label">Std</span></div>
@@ -144,8 +147,8 @@
             <div class="step" id="step2">
                 <h3>Abschlusshoodie STU 2026</h3>
                 <div class="hoodie-grid">
-                    <img src="assets/929EC312-9B58-4EAB-8F55-F9008C29976D_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Front">
-                    <img src="assets/F57861C4-A647-462E-AC1E-44D149B11DD3_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Back">
+                    <img src="https://via.placeholder.com/400x400?text=Hoodie+Front" class="hoodie-img" alt="Hoodie Front">
+                    <img src="https://via.placeholder.com/400x400?text=Hoodie+Back" class="hoodie-img" alt="Hoodie Back">
                 </div>
                 <div class="model-hint">💡 Die abgebildete Person ist 1,83m groß und trägt Größe M (fällt leicht oversized aus).</div>
                 
@@ -169,10 +172,13 @@
                     🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" löst du eine verbindliche Bestellung aus. 
                     Die Rechnung erhältst du danach sofort per E-Mail.
                 </div>
+                
+                <!-- NEU: Streng DSGVO-konformer Text -->
                 <label class="checkbox-container">
                     <input type="checkbox" id="dsgvo" required>
-                    <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
+                    <span>Ich stimme der Verarbeitung meiner Daten (Name, E-Mail, Bestellmenge) zur Abwicklung des Hoodie-Verkaufs zu. Die Daten werden nach Abschluss der Aktion restlos gelöscht. Es werden <strong>keine</strong> IP-Adressen dauerhaft gespeichert.</span>
                 </label>
+                
                 <button type="button" class="btn btn-back" style="margin-top: 15px;" onclick="nextStep(2)">⬅ Produkte anpassen</button>
                 <button type="submit" class="btn btn-success">✅ Kostenpflichtig bestellen</button>
             </div>
@@ -180,13 +186,50 @@
     </div>
 </div>
 
-<div id="support-footer" class="support-footer hidden">
-    Hast du Fragen zur Bestellung? Schreib uns per WhatsApp / SMS:<br>
-    <a id="support-link" href="">Lade Nummer...</a>
+<!-- DSGVO Footer (Support, Impressum, Datenschutz) -->
+<div class="legal-footer">
+    <div id="support-footer" class="hidden" style="margin-bottom: 15px; font-size: 1.1em;">
+        Hast du Fragen zur Bestellung? <br>
+        <a id="support-link" href="" style="color: var(--primary); font-weight: bold; border: none;">📞 Support kontaktieren</a>
+    </div>
+    <a onclick="openModal('modal-impressum')">Impressum</a> | 
+    <a onclick="openModal('modal-datenschutz')">Datenschutzerklärung</a>
+</div>
+
+<!-- MODAL: IMPRESSUM -->
+<div class="modal-overlay" id="modal-impressum">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('modal-impressum')">×</span>
+        <h2>Impressum</h2>
+        <p><strong>Verantwortlich für dieses private Projekt:</strong><br>
+        [Jill] [Hils]<br>
+        [Aixheimer Straße] [2]<br>
+        [78056] [Villingen-Schwenningen]<br><br>
+        <strong>Kontakt:</strong><br>
+        E-Mail: [jill@hils-vs.de]<br>
+        <em>Dieses Projekt ist eine private Initiative des Abiturjahrgangs 2026 und steht in keiner Verbindung zur offiziellen Schulleitung.</em></p>
+    </div>
+</div>
+
+<!-- MODAL: DATENSCHUTZ -->
+<div class="modal-overlay" id="modal-datenschutz">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('modal-datenschutz')">×</span>
+        <h2>Datenschutzerklärung</h2>
+        <p><strong>1. Datenverarbeitung:</strong> Wir erheben und speichern deinen Namen und deine E-Mail-Adresse ausschließlich zur Abwicklung, Rechnungsstellung und Auslieferung der bestellten Hoodies (Art. 6 Abs. 1 lit. b DSGVO).</p>
+        <p><strong>2. Löschung:</strong> Sämtliche Daten (inklusive der Datenbank) werden spätestens 4 Wochen nach vollständiger Auslieferung und Bezahlung aller Hoodies restlos und unwiderruflich gelöscht.</p>
+        <p><strong>3. Keine IP-Speicherung:</strong> Zur Gewährleistung der Datensicherheit werden bei der Bestellung keine IP-Adressen gespeichert. Der Live-Besucherzähler anonymisiert IP-Adressen mittels SHA-256 Hashing und löscht diese nach 2 Minuten automatisch.</p>
+        <p><strong>4. Dienstleister:</strong> Zur sicheren technischen Bereitstellung nutzen wir die Dienste Vercel (Hosting), MongoDB (Datenbank) und Google (E-Mail Versand). Die Daten werden verschlüsselt übertragen (HTTPS).</p>
+        <p><strong>5. Rechte:</strong> Du hast jederzeit das Recht auf Auskunft, Berichtigung oder Löschung deiner Daten. Schreibe uns dazu einfach eine E-Mail.</p>
+    </div>
 </div>
 
 <script>
-    // --- LIVE TRACKING PING (Alle 15 Sekunden) ---
+    // Modal Logik
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // --- LIVE TRACKING PING (DSGVO-konform: Hashes im Server) ---
     function pingServer() { fetch('/api/ping', { method: 'POST' }).catch(() => {}); }
     pingServer(); setInterval(pingServer, 15000);
 
@@ -220,7 +263,6 @@
 
             if (data.supportPhone && data.supportPhone.trim() !== "") {
                 const link = document.getElementById('support-link');
-                link.innerText = data.supportPhone;
                 link.href = `tel:${data.supportPhone.replace(/\s+/g, '')}`; 
                 document.getElementById('support-footer').classList.remove('hidden');
             }

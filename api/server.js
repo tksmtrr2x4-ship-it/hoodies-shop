@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const basicAuth = require('express-basic-auth');
 const { Parser } = require('json2csv');
+const crypto = require('crypto'); // NEU: Für DSGVO-konformes Hashing
 const { createInvoiceAndSendEmail } = require('./utils');
 
 const app = express();
@@ -22,9 +23,9 @@ const OrderSchema = new mongoose.Schema({
     role: String, 
     items: Object, 
     totalPrice: Number, 
-    ipAddress: String,
+    ipAddress: String, // Bleibt im Schema, aber wir speichern nur einen DSGVO-Hinweis
     status: { type: String, default: 'offen' },
-    reminderCount: { type: Number, default: 0 }, // NEU: Erinnerungs-Zähler
+    reminderCount: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });
 const Order = mongoose.model('Order', OrderSchema);
@@ -40,20 +41,27 @@ const SettingsSchema = new mongoose.Schema({
     payDays: { type: Number, default: 14 },
     supportPhone: { type: String, default: "" },
     shopStatus: { type: String, default: "geöffnet" },
-    openingDate: { type: Date, default: null } // NEU: Countdown-Datum
+    openingDate: { type: Date, default: null }
 });
 const Settings = mongoose.model('Settings', SettingsSchema);
 
-// NEU: Live-Besucher Tracking
-const VisitorSchema = new mongoose.Schema({ ip: String, lastActive: Date });
+// NEU: DSGVO-konformes Live-Besucher Tracking mit automatischer Löschung nach 120 Sekunden
+const VisitorSchema = new mongoose.Schema({ 
+    hashedIp: String, 
+    lastActive: { type: Date, default: Date.now, expires: 120 } 
+});
 const Visitor = mongoose.model('Visitor', VisitorSchema);
 
 // --- ÖFFENTLICHE API ---
 app.post('/api/ping', async (req, res) => {
     try {
         await connectDB();
-        const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unbekannt';
-        await Visitor.findOneAndUpdate({ ip }, { lastActive: new Date() }, { upsert: true });
+        const rawIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unbekannt';
+        
+        // DSGVO: IP-Adresse sofort irreversibel verschlüsseln (Hashing)
+        const hashedIp = crypto.createHash('sha256').update(rawIp).digest('hex');
+        
+        await Visitor.findOneAndUpdate({ hashedIp }, { lastActive: new Date() }, { upsert: true });
         res.sendStatus(200);
     } catch(e) { res.sendStatus(500); }
 });
@@ -80,14 +88,11 @@ app.post('/api/order', async (req, res) => {
         let settings = await Settings.findOne();
         if (!settings) settings = await Settings.create({}); 
         
-        // NEU: Sicherheits-Check mit Countdown-Berücksichtigung
         let isOpen = false;
         if (settings.shopStatus === 'geöffnet') isOpen = true;
         if (settings.shopStatus === 'bald' && settings.openingDate && new Date() >= new Date(settings.openingDate)) isOpen = true;
 
-        if (!isOpen) {
-            return res.status(403).send('Der Verkauf ist aktuell geschlossen oder noch nicht gestartet.');
-        }
+        if (!isOpen) return res.status(403).send('Der Verkauf ist aktuell geschlossen oder noch nicht gestartet.');
 
         const { name, email, role, items, honeypot, dsgvo } = req.body;
         if (honeypot) return res.status(400).send('Spam erkannt.');
@@ -99,7 +104,10 @@ app.post('/api/order', async (req, res) => {
         if (totalQty === 0) return res.status(400).send('Keine Artikel ausgewählt.');
 
         const totalPrice = totalQty * pricePerItem;
-        const ipAddress = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'Unbekannt';
+        
+        // DSGVO: Es wird ausdrücklich KEINE IP mehr bei der Bestellung gespeichert!
+        const ipAddress = "Nicht gespeichert (DSGVO-konform)"; 
+        
         const orderCount = await Order.countDocuments();
         const invoiceNum = `RE-${new Date().getFullYear()}-${String(orderCount + 1).padStart(3, '0')}`;
 
@@ -119,8 +127,7 @@ const adminAuth = basicAuth({ users: {[process.env.ADMIN_USER]: process.env.ADMI
 
 app.get('/api/admin/visitors', adminAuth, async (req, res) => {
     await connectDB();
-    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000); // Nur Besucher der letzten 2 Min
-    const count = await Visitor.countDocuments({ lastActive: { $gte: twoMinsAgo } });
+    const count = await Visitor.countDocuments(); // Zählt nur aktive Hashes, da MongoDB abgelaufene automatisch löscht
     res.json({ count });
 });
 
@@ -142,7 +149,6 @@ app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
     res.sendStatus(200);
 });
 
-// NEU: Erinnerung senden
 app.post('/api/admin/orders/:id/remind', adminAuth, async (req, res) => {
     try {
         await connectDB();
@@ -151,14 +157,12 @@ app.post('/api/admin/orders/:id/remind', adminAuth, async (req, res) => {
         if(!order || !settings) return res.status(404).send('Nicht gefunden');
 
         const pricePerItem = (order.role === 'Lehrer') ? 25.00 : 55.00;
-        await createInvoiceAndSendEmail(order, pricePerItem, settings, true); // true = ist Erinnerung
+        await createInvoiceAndSendEmail(order, pricePerItem, settings, true); 
         
         order.reminderCount += 1;
         await order.save();
         res.sendStatus(200);
-    } catch(e) {
-        res.status(500).send('Fehler beim E-Mail Versand.');
-    }
+    } catch(e) { res.status(500).send('Fehler beim E-Mail Versand.'); }
 });
 
 app.get('/api/admin/settings', adminAuth, async (req, res) => {
