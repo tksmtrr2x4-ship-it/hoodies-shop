@@ -42,14 +42,16 @@
             <h3>Schritt 2: Produktauswahl (49,95 € / Stück)</h3>
             <div class="hoodie-grid">
                 <!-- Hier kannst du später deine echten Bilder verlinken -->
-                <img src="https://via.placeholder.com/300x300?text=Hoodie+Front" class="hoodie-img" alt="Hoodie Front">
-                <img src="https://via.placeholder.com/300x300?text=Hoodie+Back" class="hoodie-img" alt="Hoodie Back">
+                <img src="assets/929EC312-9B58-4EAB-8F55-F9008C29976D_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Front">
+                <img src="assets/F57861C4-A647-462E-AC1E-44D149B11DD3_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Back">
             </div>
             <div id="sizes">
+                <div class="size-row"><span>Größe XS</span><input type="number" id="qtyS" min="0" value="0"></div>
                 <div class="size-row"><span>Größe S</span><input type="number" id="qtyS" min="0" value="0"></div>
                 <div class="size-row"><span>Größe M</span><input type="number" id="qtyM" min="0" value="0"></div>
                 <div class="size-row"><span>Größe L</span><input type="number" id="qtyL" min="0" value="0"></div>
                 <div class="size-row"><span>Größe XL</span><input type="number" id="qtyXL" min="0" value="0"></div>
+                <div class="size-row"><span>Größe XXL</span><input type="number" id="qtyXL" min="0" value="0"></div>
             </div>
             <button type="button" class="btn" onclick="nextStep(1)" style="background:#888;">Zurück</button>
             <button type="button" class="btn" onclick="goToSummary()">Weiter zur Bestätigung</button>
@@ -67,7 +69,7 @@
             
             <label style="font-size: 0.9em; display:flex; gap:10px; align-items:start; margin-top: 15px;">
                 <input type="checkbox" id="dsgvo" required style="width: auto; transform: scale(1.2); margin-top: 3px;">
-                <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu (inkl. Speicherung der IP-Adresse zu Sicherheitszwecken).</span>
+                <span>Ich bestätige die Bedingungen und stimme der Verarbeitung meiner Daten gemäß DSGVO zur Abwicklung der Bestellung zu.</span>
             </label>
 
             <button type="button" class="btn" onclick="nextStep(2)" style="background:#888; margin-top: 20px;">Zurück ändern</button>
@@ -78,7 +80,7 @@
 
 <script>
     // PREIS HIER ANPASSEN (Muss mit dem Preis in Vercel übereinstimmen)
-    const pricePerItem = 49.95;
+    const pricePerItem = 55.00;
 
     function nextStep(step) {
         // Validierung für Schritt 1 (Name & E-Mail müssen ausgefüllt sein)
