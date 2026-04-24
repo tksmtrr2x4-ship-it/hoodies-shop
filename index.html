@@ -81,13 +81,15 @@
         .checkbox-container span { font-size: 0.85em; line-height: 1.4; color: #555; }
         .hidden { display: none !important; }
 
-        .legal-footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #888; width: 100%; }
-        .legal-footer a { color: #555; text-decoration: none; margin: 0 10px; cursor: pointer; border-bottom: 1px dotted #888; transition: color 0.2s;}
+        /* DSGVO Footer & Modals */
+        .legal-footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #888; width: 100%; line-height: 1.8;}
+        .legal-footer a { color: #555; text-decoration: none; margin: 0 10px; cursor: pointer; border-bottom: 1px dotted #888; transition: color 0.2s; font-weight: 600;}
         .legal-footer a:hover { color: var(--primary); }
         
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
-        .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 100%; max-height: 80vh; overflow-y: auto; position: relative; }
-        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5em; cursor: pointer; color: #888; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; max-width: 650px; width: 100%; max-height: 80vh; overflow-y: auto; position: relative; }
+        .modal-content h2 { margin-top: 0; font-size: 1.5em; color: var(--secondary); text-transform: none; font-style: normal; border-bottom: 2px solid var(--border); padding-bottom: 10px; text-align: left;}
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5em; cursor: pointer; color: #888; font-weight: bold;}
         .close-modal:hover { color: #000; }
     </style>
 </head>
@@ -168,13 +170,13 @@
                 <h3>Übersicht & Bestätigung</h3>
                 <div id="summaryBox"></div>
                 <div class="alert-text">
-                    🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" lösen Sie eine verbindliche Bestellung aus. 
+                    🚨 Wichtig: Mit Klick auf "Kostenpflichtig bestellen" lösen Sie eine verbindliche Bestellung zur Vorproduktion aus. 
                     Die Rechnung erhalten Sie danach sofort per E-Mail.
                 </div>
                 
                 <label class="checkbox-container">
                     <input type="checkbox" id="dsgvo" required>
-                    <span>Ich stimme der Verarbeitung meiner Daten (Name, E-Mail, Bestellmenge) zur Abwicklung des Hoodie-Verkaufs zu. Die Daten werden nach Abschluss der Aktion restlos gelöscht. Es werden <strong>keine</strong> IP-Adressen dauerhaft gespeichert.</span>
+                    <span>Ich habe die <strong>AGB</strong> und <strong>Datenschutzbestimmungen</strong> gelesen und akzeptiere sie. Ich verstehe, dass es sich um eine private Sammelbestellung mit Vorkasse handelt und ein Widerruf ausgeschlossen ist. Ich stimme der Datenverarbeitung zur Bestellabwicklung zu.</span>
                 </label>
                 
                 <button type="button" class="btn btn-back" style="margin-top: 15px;" onclick="nextStep(2)">⬅ Produkte anpassen</button>
@@ -189,10 +191,32 @@
         Haben Sie Fragen zur Bestellung? <br>
         <a id="support-link" href="" style="color: var(--primary); font-weight: bold; border: none;">📞 Support kontaktieren</a>
     </div>
-    <a onclick="openModal('modal-impressum')">Impressum</a> | 
-    <a onclick="openModal('modal-datenschutz')">Datenschutzerklärung</a>
+    <a onclick="openModal('modal-agb')">AGB & Bedingungen</a> | 
+    <a onclick="openModal('modal-datenschutz')">Datenschutzerklärung</a> |
+    <a onclick="openModal('modal-impressum')">Impressum</a> 
 </div>
 
+<!-- MODAL: AGB -->
+<div class="modal-overlay" id="modal-agb">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal('modal-agb')">×</span>
+        <h2>Allgemeine Geschäftsbedingungen (AGB)</h2>
+        <p><strong>§1 Geltungsbereich und Vertragsgegenstand</strong><br>
+        Dies ist kein gewerblicher Onlineshop. Bei dieser Verkaufsaktion handelt es sich um eine rein private Sammelbestellung des Abiturjahrgangs 2026. Die Organisatoren handeln als Privatpersonen, nicht als Unternehmer.</p>
+        
+        <p><strong>§2 Vertragsschluss und Vorkasse</strong><br>
+        Mit dem Klick auf "Kostenpflichtig bestellen" geben Sie ein verbindliches Angebot zur Teilnahme an der Sammelbestellung ab. Da die Hoodies nur durch eine kollektive Großbestellung beim Produzenten gefertigt werden können, gilt das Prinzip der zwingenden Vorkasse. <br><br>
+        Der Rechnungsbetrag muss innerhalb der auf der Rechnung angegebenen Frist vollständig auf das angegebene Konto überwiesen werden. Hoodies, die bis zum Produktionsstart nicht bezahlt wurden, werden nicht bestellt.</p>
+        
+        <p><strong>§3 Kein Widerrufsrecht / Keine Rückgabe</strong><br>
+        Da es sich um Textilien handelt, die speziell für diesen Jahrgang nach individuellen Spezifikationen bedruckt werden (Sonderanfertigung), und es sich um einen reinen Privatverkauf handelt, ist das gesetzliche Widerrufsrecht ausgeschlossen. Ein Umtausch (z. B. wegen falscher Größenauswahl) oder eine Rückgabe ist nicht möglich.</p>
+
+        <p><strong>§4 Haftungsausschluss</strong><br>
+        Die privaten Organisatoren übernehmen keine Haftung für Produktionsmängel des Textilherstellers, leichte Farbabweichungen oder Lieferverzögerungen, die nicht in ihrer Macht stehen. Sollten grobe Mängel vorliegen, werden diese selbstverständlich als Reklamation an die ausführende Druckerei weitergeleitet.</p>
+    </div>
+</div>
+
+<!-- MODAL: IMPRESSUM -->
 <div class="modal-overlay" id="modal-impressum">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal('modal-impressum')">×</span>
@@ -200,13 +224,14 @@
         <p><strong>Verantwortlich für dieses private Projekt:</strong><br>
         Jill Hils<br>
         Aixheimer Straße 2<br>
-        78056 in Villingen-Schwenningen<br><br>
+        78056 Villingen-Schwenningen<br><br>
         <strong>Kontakt:</strong><br>
-        E-Mail: jill@hils-vs.de<br>
+        E-Mail: jill@hils-vs.de<br><br>
         <em>Dieses Projekt ist eine private Initiative des Abiturjahrgangs 2026 und steht in keiner Verbindung zur offiziellen Schulleitung.</em></p>
     </div>
 </div>
 
+<!-- MODAL: DATENSCHUTZ -->
 <div class="modal-overlay" id="modal-datenschutz">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal('modal-datenschutz')">×</span>
@@ -289,7 +314,6 @@
         } catch (e) { console.log("Ladefehler"); }
     });
 
-    // NEU: Reparierte Countdown-Logik (ohne 1-Sekunden Verzögerung!)
     function startCountdown(targetDateStr, mode, nextTargetDateStr = null) {
         if (countdownTimer) clearInterval(countdownTimer);
         
@@ -340,7 +364,6 @@
             document.getElementById('cd-secs').innerText = s.toString().padStart(2, '0');
         }
 
-        // Führt die Funktion SOFORT einmal aus, und erst DANN den Intervall
         updateTimer();
         countdownTimer = setInterval(updateTimer, 1000);
     }

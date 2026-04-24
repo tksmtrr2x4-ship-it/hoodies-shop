@@ -34,6 +34,9 @@
         .role-badge { background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; margin-left: 5px; }
         .size-badge { background: #00AEEF; color: white; padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 1.1em; }
         .remind-badge { background: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+        
+        /* NEU: Das Warnschild */
+        .warning-badge { color: #dc3545; font-weight: bold; display: inline-block; margin-top: 5px; font-size: 0.9em; background: #ffe1e1; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffb3b3;}
     </style>
 </head>
 <body>
@@ -64,7 +67,7 @@
                 <input type="text" id="search" placeholder="Suche nach Name oder RE-Nr..." onkeyup="filterTable()" style="width:250px; margin-left:10px; display: inline-block;">
                 
                 <table>
-                    <thead><tr><th>Rechnungs-ID</th><th>Kunde</th><th>Größe</th><th>Einzelbetrag</th><th>Status & Erinnerung</th><th style="min-width: 180px;">Aktionen</th></tr></thead>
+                    <thead><tr><th>Kaufdatum & ID</th><th>Kunde</th><th>Größe</th><th>Einzelbetrag</th><th>Status & Erinnerung</th><th style="min-width: 180px;">Aktionen</th></tr></thead>
                     <tbody id="tableBody"></tbody>
                 </table>
             </div>
@@ -202,13 +205,28 @@
         function renderTable(orders) {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '';
+            
+            const now = new Date();
+
             orders.forEach(o => {
-                const date = new Date(o.createdAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute:'2-digit' });
+                const orderDate = new Date(o.createdAt);
+                const dateStr = orderDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
+                const timeStr = orderDate.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute:'2-digit' });
                 const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
                 
+                // NEU: Berechnung der verstrichenen Tage für das Ausrufezeichen
+                const diffTime = Math.abs(now - orderDate);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                
                 let statusHtml = `<strong>${o.status}</strong>`;
-                if(o.status === 'offen' && o.reminderCount > 0) {
-                    statusHtml += `<br><span class="remind-badge">${o.reminderCount}x erinnert</span>`;
+                
+                if(o.status === 'offen') {
+                    if (diffDays > 11) {
+                        statusHtml += `<br><span class="warning-badge">⚠️ ${diffDays} Tage offen!</span>`;
+                    }
+                    if (o.reminderCount > 0) {
+                        statusHtml += `<br><span class="remind-badge">${o.reminderCount}x erinnert</span>`;
+                    }
                 }
 
                 let btnPay = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')" title="Bezahlt">✔</button>` : '';
@@ -219,8 +237,8 @@
                     for (let i = 0; i < qty; i++) {
                         tbody.innerHTML += `
                             <tr>
-                                <td class="searchable"><strong>${o.invoiceNumber}</strong><br><small>${date} Uhr</small></td>
-                                <td class="searchable"><strong>${o.name}</strong> <span class="role-badge">${o.role}</span></td>
+                                <td class="searchable"><strong>${dateStr}</strong> <small>(${timeStr})</small><br><small style="color:#666;">ID: ${o.invoiceNumber}</small></td>
+                                <td class="searchable"><strong>${o.name}</strong> <span class="role-badge">${o.role}</span><br><small>${o.email}</small></td>
                                 <td><span class="size-badge">${size}</span></td>
                                 <td>${singlePrice.toFixed(2).replace('.', ',')} €</td>
                                 <td>${statusHtml}</td>
