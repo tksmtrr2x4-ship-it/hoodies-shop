@@ -96,7 +96,7 @@ app.post('/api/order', async (req, res) => {
         if (honeypot) return res.status(400).send('Spam erkannt.');
         if (!dsgvo) return res.status(400).send('DSGVO muss akzeptiert werden.');
 
-        const pricePerItem = (role === 'Lehrer') ? 25.00 : 55.00;
+        const pricePerItem = (role === 'Lehrer') ? 40.00 : 55.00;
         let totalQty = 0;
         for (let size in items) totalQty += items[size];
         if (totalQty === 0) return res.status(400).send('Keine Artikel ausgewählt.');
@@ -154,7 +154,7 @@ app.post('/api/admin/orders/:id/remind', adminAuth, async (req, res) => {
         const settings = await Settings.findOne();
         if(!order || !settings) return res.status(404).send('Nicht gefunden');
 
-        const pricePerItem = (order.role === 'Lehrer') ? 25.00 : 55.00;
+        const pricePerItem = (order.role === 'Lehrer') ? 40.00 : 55.00;
         await createInvoiceAndSendEmail(order, pricePerItem, settings, true); 
         
         order.reminderCount += 1;
