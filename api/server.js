@@ -35,7 +35,11 @@ const SettingsSchema = new mongoose.Schema({
     supportPhone: { type: String, default: "" },
     shopStatus: { type: String, default: "geöffnet" },
     openingDate: { type: Date, default: null },
-    closingDate: { type: Date, default: null } // NEU: Schließen Datum
+    closingDate: { type: Date, default: null },
+    // NEU: Eigene Nachrichten für die Ampel
+    msgOpen: { type: String, default: "" },
+    msgSoon: { type: String, default: "" },
+    msgClosed: { type: String, default: "" }
 });
 const Settings = mongoose.model('Settings', SettingsSchema);
 
@@ -62,10 +66,13 @@ app.get('/api/public-settings', async (req, res) => {
             supportPhone: settings ? settings.supportPhone : "",
             shopStatus: settings ? settings.shopStatus : "geöffnet",
             openingDate: settings ? settings.openingDate : null,
-            closingDate: settings ? settings.closingDate : null
+            closingDate: settings ? settings.closingDate : null,
+            msgOpen: settings ? settings.msgOpen : "",
+            msgSoon: settings ? settings.msgSoon : "",
+            msgClosed: settings ? settings.msgClosed : ""
         });
     } catch (e) {
-        res.json({ supportPhone: "", shopStatus: "geöffnet", openingDate: null, closingDate: null });
+        res.json({ supportPhone: "", shopStatus: "geöffnet", openingDate: null, closingDate: null, msgOpen: "", msgSoon: "", msgClosed: "" });
     }
 });
 
@@ -80,14 +87,9 @@ app.post('/api/order', async (req, res) => {
         const openTime = settings.openingDate ? new Date(settings.openingDate) : null;
         const closeTime = settings.closingDate ? new Date(settings.closingDate) : null;
 
-        // Prüfen, ob eröffnet
         if (settings.shopStatus === 'geöffnet') isOpen = true;
         if (settings.shopStatus === 'bald' && openTime && now >= openTime) isOpen = true;
-        
-        // Prüfen, ob abgelaufen
-        if (isOpen && closeTime && now >= closeTime) {
-            isOpen = false; 
-        }
+        if (isOpen && closeTime && now >= closeTime) isOpen = false; 
 
         if (!isOpen) return res.status(403).send('Der Verkauf ist aktuell geschlossen oder bereits abgelaufen.');
 
@@ -103,7 +105,6 @@ app.post('/api/order', async (req, res) => {
         const totalPrice = totalQty * pricePerItem;
         const ipAddress = "Nicht gespeichert (DSGVO-konform)"; 
         
-        // Zwingt die Rechnungsnummer auf das deutsche Jahr
         const yearFormatter = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', year: 'numeric' });
         const germanYear = yearFormatter.format(new Date());
 
