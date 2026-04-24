@@ -94,10 +94,7 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
         doc.font('Helvetica').fontSize(10);
         let paymentText = `Bitte überweise den Betrag von ${order.totalPrice.toFixed(2).replace('.', ',')} € innerhalb von ${settings.payDays} Tagen.\n\n`;
         if (settings.issuerIban) paymentText += `Bankverbindung: ${settings.issuerIban}\n`;
-        
-        // NEU: Der Hinweis direkt auf der PDF-Rechnung!
         if (settings.issuerPayPal) paymentText += `PayPal E-Mail: ${settings.issuerPayPal} (Bitte zwingend "Freunde" wählen!)\n`;
-        
         paymentText += `Verwendungszweck: ${order.invoiceNumber}\n\n`;
         paymentText += `Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.`;
         doc.text(paymentText, 50, currentY, { width: 300 });
@@ -154,4 +151,37 @@ async function sendPaymentConfirmationEmail(order, settings) {
     await transporter.sendMail(mailOptions);
 }
 
-module.exports = { createInvoiceAndSendEmail, sendPaymentConfirmationEmail };
+// NEU: Funktion für Stornierungs-Mail
+async function sendCancellationEmail(order, settings) {
+    let transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+
+    const subjectText = `Stornierung deiner Bestellung ${order.invoiceNumber}`;
+    
+    let mailBody = `Hallo ${order.name},\n\n`;
+    mailBody += `hiermit bestätigen wir dir die Stornierung deiner Bestellung mit der Rechnungsnummer ${order.invoiceNumber}.\n\n`;
+    mailBody += `Deine Bestellung wurde in unserem System gelöscht.\n\n`;
+    mailBody += `Solltest du diese Stornierung nicht selbst veranlasst haben oder Fragen dazu haben, wende dich bitte an unseren Support:\n`;
+    if (settings.supportPhone && settings.supportPhone !== "") {
+        mailBody += `📞 Telefon / WhatsApp: ${settings.supportPhone}\n`;
+    }
+    mailBody += `✉️ Oder antworte einfach direkt auf diese E-Mail.\n\n`;
+    mailBody += `Viele Grüße,\n`;
+    mailBody += `${settings.issuerName}`;
+
+    let mailOptions = {
+        from: process.env.SMTP_USER,
+        to: order.email,
+        subject: subjectText,
+        text: mailBody
+    };
+
+    await transporter.sendMail(mailOptions);
+}
+
+// Alle 3 Funktionen exportieren
+module.exports = { createInvoiceAndSendEmail, sendPaymentConfirmationEmail, sendCancellationEmail };

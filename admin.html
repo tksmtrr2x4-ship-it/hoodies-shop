@@ -19,6 +19,7 @@
         .btn-green { background: #28a745; }
         .btn-red { background: #dc3545; }
         .btn-blue { background: #0284c7; }
+        .btn-resend { background: #059669; } /* Dunkleres Grün für "erneut senden" */
         .btn:hover { opacity: 0.8; }
         
         #loginScreen { text-align: center; margin-top: 100px; }
@@ -73,7 +74,7 @@
                             <th>Größe</th>
                             <th>Betrag</th>
                             <th>Status & Erinnerung</th>
-                            <th style="min-width: 130px;">Aktionen</th>
+                            <th style="min-width: 140px;">Aktionen</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody"></tbody>
@@ -254,18 +255,22 @@
                 
                 let statusHtml = `<strong>${o.status}</strong>`;
                 
+                let btnPay = '';
+                let btnRemind = '';
+                let btnResendPay = '';
+
                 if(o.status === 'offen') {
-                    if (diffDays > 11) {
-                        statusHtml += `<br><span class="warning-badge">⚠️ ${diffDays} Tage überfällig!</span>`;
-                    }
-                    if (o.reminderCount > 0) {
-                        statusHtml += `<br><span class="remind-badge">${o.reminderCount}x erinnert</span>`;
-                    }
+                    if (diffDays > 11) statusHtml += `<br><span class="warning-badge">⚠️ ${diffDays} Tage überfällig!</span>`;
+                    if (o.reminderCount > 0) statusHtml += `<br><span class="remind-badge">${o.reminderCount}x erinnert</span>`;
+                    
+                    btnPay = `<button class="btn btn-green" onclick="markPaid('${o._id}')" title="Bezahlt markieren & Mail senden">✔</button>`;
+                    btnRemind = `<button class="btn btn-blue" onclick="remindOrder('${o._id}')" title="Erinnerung senden">🔔</button>`;
+                } else {
+                    // NEU: Wenn schon bezahlt, zeige den "Erneut Senden" Button
+                    btnResendPay = `<button class="btn btn-resend" onclick="resendPaymentMail('${o._id}')" title="Zahlungsbestätigung erneut senden">📧✔</button>`;
                 }
 
-                let btnPay = o.status === 'offen' ? `<button class="btn btn-green" onclick="markPaid('${o._id}')" title="Bezahlt">✔</button>` : '';
-                let btnRemind = o.status === 'offen' ? `<button class="btn btn-blue" onclick="remindOrder('${o._id}')" title="Erinnerung senden">🔔</button>` : '';
-                let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Löschen">🗑️</button>`;
+                let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Stornieren & Löschen">🗑️</button>`;
 
                 for (const[size, qty] of Object.entries(o.items)) {
                     for (let i = 0; i < qty; i++) {
@@ -277,14 +282,13 @@
                                 <td><span class="size-badge">${size}</span></td>
                                 <td>${singlePrice.toFixed(2).replace('.', ',')} €</td>
                                 <td>${statusHtml}</td>
-                                <td><div style="display:flex; gap:5px;">${btnPay} ${btnRemind} ${btnDel}</div></td>
+                                <td><div style="display:flex; gap:5px;">${btnPay} ${btnResendPay} ${btnRemind} ${btnDel}</div></td>
                             </tr>`;
                     }
                 }
             });
         }
 
-        // NEU: Logik für Zahlungsbestätigung
         async function markPaid(id) {
             if(confirm('Zahlungseingang bestätigen? Der Kunde erhält nun automatisch eine Bestätigungs-E-Mail.')) {
                 const btnRes = await fetch(`/api/admin/orders/${id}/pay`, { method: 'POST', headers: { 'Authorization': authHeader } });
@@ -298,6 +302,18 @@
             }
         }
 
+        // NEU: Funktion, um nur die Bestätigung nochmal zu senden
+        async function resendPaymentMail(id) {
+            if(confirm('Möchtest du die Zahlungsbestätigungs-E-Mail erneut an diesen Kunden versenden?')) {
+                const btnRes = await fetch(`/api/admin/orders/${id}/resend-payment`, { method: 'POST', headers: { 'Authorization': authHeader } });
+                if(btnRes.ok) {
+                    alert('Zahlungsbestätigung erfolgreich versendet!');
+                } else {
+                    alert('Fehler beim Senden der E-Mail.');
+                }
+            }
+        }
+
         async function remindOrder(id) {
             if(confirm('Möchtest du diesem Kunden eine Zahlungserinnerung inkl. neuer PDF per Mail senden?')) {
                 await fetch(`/api/admin/orders/${id}/remind`, { method: 'POST', headers: { 'Authorization': authHeader } });
@@ -308,7 +324,8 @@
         }
 
         async function deleteOrder(id) {
-            if(confirm('ACHTUNG: Möchtest du diese gesamte Bestellung unwiderruflich löschen?')) {
+            // Text angepasst: Informiert Admin über die Storno-Mail
+            if(confirm('ACHTUNG: Bestellung stornieren und löschen? Der Kunde erhält automatisch eine Storno-E-Mail.')) {
                 await fetch(`/api/admin/orders/${id}`, { method: 'DELETE', headers: { 'Authorization': authHeader } });
                 const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
                 renderTable(await res.json());

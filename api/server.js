@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const basicAuth = require('express-basic-auth');
 const { Parser } = require('json2csv');
 const crypto = require('crypto'); 
-const { createInvoiceAndSendEmail, sendPaymentConfirmationEmail } = require('./utils'); // Importiert die neue Funktion
+const { createInvoiceAndSendEmail, sendPaymentConfirmationEmail, sendCancellationEmail } = require('./utils');
 
 const app = express();
 app.use(express.json());
@@ -135,18 +135,15 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
     res.json(orders);
 });
 
-// NEU: Route zum Bezahlen wurde erweitert (Sendet die Bestätigungsmail)
 app.post('/api/admin/orders/:id/pay', adminAuth, async (req, res) => {
     try {
         await connectDB();
         const order = await Order.findById(req.params.id);
         if (!order) return res.status(404).send('Bestellung nicht gefunden');
 
-        // Status ändern
         order.status = 'bezahlt';
         await order.save();
 
-        // Einstellungen laden und Mail senden
         let settings = await Settings.findOne();
         if (!settings) settings = await Settings.create({});
         await sendPaymentConfirmationEmail(order, settings);
@@ -158,10 +155,49 @@ app.post('/api/admin/orders/:id/pay', adminAuth, async (req, res) => {
     }
 });
 
+// NEU: Route zum nachträglichen Senden der Bestätigung (für Alt-Bestellungen)
+app.post('/api/admin/orders/:id/resend-payment', adminAuth, async (req, res) => {
+    try {
+        await connectDB();
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).send('Nicht gefunden');
+
+        let settings = await Settings.findOne();
+        if (!settings) settings = await Settings.create({});
+        
+        await sendPaymentConfirmationEmail(order, settings);
+        res.sendStatus(200);
+    } catch(e) {
+        console.error(e);
+        res.status(500).send('Fehler beim Mailversand.');
+    }
+});
+
+// ERWEITERT: Löschen sendet jetzt vorher eine Storno-Mail
 app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
-    await connectDB();
-    await Order.findByIdAndDelete(req.params.id);
-    res.sendStatus(200);
+    try {
+        await connectDB();
+        const order = await Order.findById(req.params.id);
+        
+        if (order) {
+            let settings = await Settings.findOne();
+            if (!settings) settings = await Settings.create({});
+            
+            // Versuche Storno-Mail zu senden, bevor gelöscht wird
+            try {
+                await sendCancellationEmail(order, settings);
+            } catch (mailErr) {
+                console.log('Storno-Mail konnte nicht gesendet werden:', mailErr);
+            }
+            
+            // Löschen
+            await Order.findByIdAndDelete(req.params.id);
+        }
+        res.sendStatus(200);
+    } catch(e) {
+        console.error(e);
+        res.status(500).send('Fehler beim Löschen.');
+    }
 });
 
 app.post('/api/admin/orders/:id/remind', adminAuth, async (req, res) => {
