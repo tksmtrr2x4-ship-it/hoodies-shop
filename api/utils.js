@@ -27,8 +27,9 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
             }
 
             mailBody += `📱 SO KANNST DU BEZAHLEN:\n`;
-            mailBody += `1. GiroCode (Banking App): Öffne deine Banking-App, wähle "QR-Code scannen" (oder Foto-Überweisung) und scanne den linken QR-Code auf der Rechnung. Alle Überweisungsdaten sind direkt ausgefüllt.\n`;
-            mailBody += `2. PayPal: Scanne den rechten QR-Code einfach mit deiner Smartphone-Kamera oder der PayPal-App, um den genauen Betrag direkt und sicher an uns zu senden.\n\n`;
+            mailBody += `1. GiroCode (Banking App): Öffne deine Banking-App, wähle "QR-Code scannen" (oder Foto-Überweisung) und scanne den linken QR-Code auf der Rechnung. Alle Überweisungsdaten sind direkt ausgefüllt.\n\n`;
+            mailBody += `2. PayPal: Scanne den rechten QR-Code mit deiner Smartphone-Kamera oder der PayPal-App.\n`;
+            mailBody += `🚨 WICHTIGER HINWEIS ZU PAYPAL: Bitte wähle bei der Zahlung zwingend "Geld an Freunde und Familie senden" aus! Bei der Option "Waren und Dienstleistungen" zieht PayPal uns Transaktionsgebühren ab, wodurch dein Hoodie nicht vollständig bezahlt ist und nicht in den Druck gehen kann.\n\n`;
             mailBody += `Natürlich kannst du den Betrag auch klassisch mit den Daten auf der Rechnung überweisen.\n\n`;
             mailBody += `Viele Grüße,\n${settings.issuerName}`;
 
@@ -44,7 +45,7 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
             catch (e) { reject(e); }
         });
 
-        // --- PDF LAYOUT (Fixierte Deutsche Zeit) ---
+        // --- PDF LAYOUT ---
         const invoiceDate = new Date().toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
 
         doc.fontSize(8).fillColor('#666666');
@@ -72,7 +73,7 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
         doc.font('Helvetica');
         let currentY = startY + 20;
         
-        for (const[size, qty] of Object.entries(order.items)) {
+        for (const [size, qty] of Object.entries(order.items)) {
             if (qty > 0) {
                 doc.text(`Abschlusshoodie STU 2026 (Gr. ${size})`, 50, currentY);
                 doc.text(qty.toString(), 250, currentY, { width: 50, align: 'right' });
@@ -93,7 +94,10 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
         doc.font('Helvetica').fontSize(10);
         let paymentText = `Bitte überweise den Betrag von ${order.totalPrice.toFixed(2).replace('.', ',')} € innerhalb von ${settings.payDays} Tagen.\n\n`;
         if (settings.issuerIban) paymentText += `Bankverbindung: ${settings.issuerIban}\n`;
-        if (settings.issuerPayPal) paymentText += `PayPal E-Mail: ${settings.issuerPayPal}\n`;
+        
+        // NEU: Der Hinweis direkt auf der PDF-Rechnung!
+        if (settings.issuerPayPal) paymentText += `PayPal E-Mail: ${settings.issuerPayPal} (Bitte zwingend "Freunde" wählen!)\n`;
+        
         paymentText += `Verwendungszweck: ${order.invoiceNumber}\n\n`;
         paymentText += `Gemäß § 19 UStG wird keine Umsatzsteuer berechnet.`;
         doc.text(paymentText, 50, currentY, { width: 300 });
@@ -122,4 +126,32 @@ async function createInvoiceAndSendEmail(order, pricePerItem, settings, isRemind
         doc.end();
     });
 }
-module.exports = { createInvoiceAndSendEmail };
+
+async function sendPaymentConfirmationEmail(order, settings) {
+    let transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+
+    const subjectText = `Zahlungseingang bestätigt: Deine Bestellung ${order.invoiceNumber}`;
+    
+    let mailBody = `Hallo ${order.name},\n\n`;
+    mailBody += `wir haben hervorragende Neuigkeiten: Deine Zahlung in Höhe von ${order.totalPrice.toFixed(2).replace('.', ',')} € für die Rechnungsnummer ${order.invoiceNumber} ist erfolgreich bei uns eingegangen! 🎉\n\n`;
+    mailBody += `Vielen Dank für die schnelle und reibungslose Überweisung. Deine Bestellung ist damit fest vermerkt und vollständig bezahlt.\n\n`;
+    mailBody += `Sobald unser Verkaufszeitraum abgelaufen ist, geben wir alle bestellten Hoodies gesammelt in die Produktion. Wir melden uns rechtzeitig bei dir, sobald die Pullover zur Ausgabe bereitliegen.\n\n`;
+    mailBody += `Viele Grüße,\n`;
+    mailBody += `${settings.issuerName}`;
+
+    let mailOptions = {
+        from: process.env.SMTP_USER,
+        to: order.email,
+        subject: subjectText,
+        text: mailBody
+    };
+
+    await transporter.sendMail(mailOptions);
+}
+
+module.exports = { createInvoiceAndSendEmail, sendPaymentConfirmationEmail };

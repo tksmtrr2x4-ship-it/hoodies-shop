@@ -67,7 +67,6 @@
                 <table>
                     <thead>
                         <tr>
-                            <!-- NEU: Datum und ID getrennt -->
                             <th>Kaufdatum</th>
                             <th>Rechnungs-ID</th>
                             <th>Kunde</th>
@@ -104,7 +103,6 @@
                         </div>
                     </div>
 
-                    <!-- NEU: Öffentliche Live-Mitteilungen -->
                     <div style="grid-column: span 2; background: #f1f5f9; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 10px;">
                         <h4 style="margin-top: 0; color: #334155;">💬 Öffentliche Mitteilungen (Optional)</h4>
                         <p style="font-size: 0.85em; color: #64748b; margin-top: -10px;">Diese Texte werden direkt unter der Ampel auf der Startseite angezeigt.</p>
@@ -197,7 +195,6 @@
             document.getElementById('set_days').value = s.payDays || 14;
             document.getElementById('set_phone').value = s.supportPhone || '';
             
-            // Lade die Nachrichten
             document.getElementById('msg_open').value = s.msgOpen || '';
             document.getElementById('msg_soon').value = s.msgSoon || '';
             document.getElementById('msg_closed').value = s.msgClosed || '';
@@ -270,9 +267,8 @@
                 let btnRemind = o.status === 'offen' ? `<button class="btn btn-blue" onclick="remindOrder('${o._id}')" title="Erinnerung senden">🔔</button>` : '';
                 let btnDel = `<button class="btn btn-red" onclick="deleteOrder('${o._id}')" title="Löschen">🗑️</button>`;
 
-                for (const [size, qty] of Object.entries(o.items)) {
+                for (const[size, qty] of Object.entries(o.items)) {
                     for (let i = 0; i < qty; i++) {
-                        // NEU: Datum und Rechnungs-ID sind jetzt sauber getrennt!
                         tbody.innerHTML += `
                             <tr>
                                 <td><strong>${dateStr}</strong><br><small>${timeStr} Uhr</small></td>
@@ -288,9 +284,15 @@
             });
         }
 
+        // NEU: Logik für Zahlungsbestätigung
         async function markPaid(id) {
-            if(confirm('Zahlungseingang bestätigen?')) {
-                await fetch(`/api/admin/orders/${id}/pay`, { method: 'POST', headers: { 'Authorization': authHeader } });
+            if(confirm('Zahlungseingang bestätigen? Der Kunde erhält nun automatisch eine Bestätigungs-E-Mail.')) {
+                const btnRes = await fetch(`/api/admin/orders/${id}/pay`, { method: 'POST', headers: { 'Authorization': authHeader } });
+                if(btnRes.ok) {
+                    alert('Zahlung bestätigt & E-Mail erfolgreich versendet!');
+                } else {
+                    alert('Es gab einen Fehler beim Senden der E-Mail.');
+                }
                 const res = await fetch('/api/admin/orders', { headers: { 'Authorization': authHeader } });
                 renderTable(await res.json());
             }

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const basicAuth = require('express-basic-auth');
 const { Parser } = require('json2csv');
 const crypto = require('crypto'); 
-const { createInvoiceAndSendEmail } = require('./utils');
+const { createInvoiceAndSendEmail, sendPaymentConfirmationEmail } = require('./utils'); // Importiert die neue Funktion
 
 const app = express();
 app.use(express.json());
@@ -96,7 +96,7 @@ app.post('/api/order', async (req, res) => {
         if (honeypot) return res.status(400).send('Spam erkannt.');
         if (!dsgvo) return res.status(400).send('DSGVO muss akzeptiert werden.');
 
-        const pricePerItem = (role === 'Lehrer') ? 40.00 : 55.00;
+        const pricePerItem = (role === 'Lehrer') ? 25.00 : 55.00;
         let totalQty = 0;
         for (let size in items) totalQty += items[size];
         if (totalQty === 0) return res.status(400).send('Keine Artikel ausgewählt.');
@@ -135,10 +135,27 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
     res.json(orders);
 });
 
+// NEU: Route zum Bezahlen wurde erweitert (Sendet die Bestätigungsmail)
 app.post('/api/admin/orders/:id/pay', adminAuth, async (req, res) => {
-    await connectDB();
-    await Order.findByIdAndUpdate(req.params.id, { status: 'bezahlt' });
-    res.sendStatus(200);
+    try {
+        await connectDB();
+        const order = await Order.findById(req.params.id);
+        if (!order) return res.status(404).send('Bestellung nicht gefunden');
+
+        // Status ändern
+        order.status = 'bezahlt';
+        await order.save();
+
+        // Einstellungen laden und Mail senden
+        let settings = await Settings.findOne();
+        if (!settings) settings = await Settings.create({});
+        await sendPaymentConfirmationEmail(order, settings);
+
+        res.sendStatus(200);
+    } catch(e) {
+        console.error(e);
+        res.status(500).send('Fehler beim E-Mail Versand.');
+    }
 });
 
 app.delete('/api/admin/orders/:id', adminAuth, async (req, res) => {
@@ -154,7 +171,7 @@ app.post('/api/admin/orders/:id/remind', adminAuth, async (req, res) => {
         const settings = await Settings.findOne();
         if(!order || !settings) return res.status(404).send('Nicht gefunden');
 
-        const pricePerItem = (order.role === 'Lehrer') ? 40.00 : 55.00;
+        const pricePerItem = (order.role === 'Lehrer') ? 25.00 : 55.00;
         await createInvoiceAndSendEmail(order, pricePerItem, settings, true); 
         
         order.reminderCount += 1;
@@ -176,7 +193,6 @@ app.post('/api/admin/settings', adminAuth, async (req, res) => {
     res.sendStatus(200);
 });
 
-// NEU: Perfekter Apple Numbers / Excel Export (mit Semikolon und Datum)
 app.get('/api/admin/export', adminAuth, async (req, res) => {
     await connectDB();
     const orders = await Order.find().lean();
@@ -184,8 +200,6 @@ app.get('/api/admin/export', adminAuth, async (req, res) => {
     
     orders.forEach(o => {
         const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
-        
-        // Datum und Uhrzeit korrekt zusammenbauen
         const orderDate = new Date(o.createdAt);
         const dateStr = orderDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
         const timeStr = orderDate.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute:'2-digit' });
@@ -206,13 +220,8 @@ app.get('/api/admin/export', adminAuth, async (req, res) => {
         }
     });
     
-    // Spalten festlegen
     const fields =['Rechnungs-ID', 'Kaufdatum', 'Name', 'Rolle', 'E-Mail', 'Größe', 'Preis', 'Status'];
-    
-    // delimiter: ';' -> ZWINGEND NÖTIG für deutsches Excel/Numbers!
     const json2csvParser = new Parser({ fields, delimiter: ';' });
-    
-    // \uFEFF -> ZWINGEND NÖTIG, damit Mac/Windows Umlaute (ö, ä, ü) nicht zerstören!
     const csv = '\uFEFF' + json2csvParser.parse(flattenedOrders);
     
     res.header('Content-Type', 'text/csv; charset=utf-8');
