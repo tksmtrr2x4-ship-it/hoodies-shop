@@ -81,7 +81,6 @@
         .checkbox-container span { font-size: 0.85em; line-height: 1.4; color: #555; }
         .hidden { display: none !important; }
 
-        /* DSGVO Footer & Modals */
         .legal-footer { text-align: center; margin-top: 30px; font-size: 0.8em; color: #888; width: 100%; }
         .legal-footer a { color: #555; text-decoration: none; margin: 0 10px; cursor: pointer; border-bottom: 1px dotted #888; transition: color 0.2s;}
         .legal-footer a:hover { color: var(--primary); }
@@ -173,7 +172,6 @@
                     Die Rechnung erhalten Sie danach sofort per E-Mail.
                 </div>
                 
-                <!-- NEU: Streng DSGVO-konformer Text -->
                 <label class="checkbox-container">
                     <input type="checkbox" id="dsgvo" required>
                     <span>Ich stimme der Verarbeitung meiner Daten (Name, E-Mail, Bestellmenge) zur Abwicklung des Hoodie-Verkaufs zu. Die Daten werden nach Abschluss der Aktion restlos gelöscht. Es werden <strong>keine</strong> IP-Adressen dauerhaft gespeichert.</span>
@@ -186,7 +184,6 @@
     </div>
 </div>
 
-<!-- DSGVO Footer (Support, Impressum, Datenschutz) -->
 <div class="legal-footer">
     <div id="support-footer" class="hidden" style="margin-bottom: 15px; font-size: 1.1em;">
         Haben Sie Fragen zur Bestellung? <br>
@@ -196,7 +193,6 @@
     <a onclick="openModal('modal-datenschutz')">Datenschutzerklärung</a>
 </div>
 
-<!-- MODAL: IMPRESSUM -->
 <div class="modal-overlay" id="modal-impressum">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal('modal-impressum')">×</span>
@@ -211,7 +207,6 @@
     </div>
 </div>
 
-<!-- MODAL: DATENSCHUTZ -->
 <div class="modal-overlay" id="modal-datenschutz">
     <div class="modal-content">
         <span class="close-modal" onclick="closeModal('modal-datenschutz')">×</span>
@@ -225,11 +220,8 @@
 </div>
 
 <script>
-    // Modal Logik
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-    // --- LIVE TRACKING PING (DSGVO-konform: Hashes im Server) ---
     function pingServer() { fetch('/api/ping', { method: 'POST' }).catch(() => {}); }
     pingServer(); setInterval(pingServer, 15000);
 
@@ -241,21 +233,49 @@
             const data = await res.json();
             
             const statusMsg = document.getElementById('statusMessage');
+            const now = new Date().getTime();
+            const openTime = data.openingDate ? new Date(data.openingDate).getTime() : null;
+            const closeTime = data.closingDate ? new Date(data.closingDate).getTime() : null;
+
+            let isShopOpen = false;
             
             if (data.shopStatus === 'geöffnet') {
-                unlockShop("Der Verkauf ist geöffnet!");
-            } else if (data.shopStatus === 'bald') {
-                document.getElementById('light-yellow').classList.add('active');
+                isShopOpen = true;
+            } else if (data.shopStatus === 'bald' && openTime && now >= openTime) {
+                isShopOpen = true; 
+            }
+
+            if (isShopOpen && closeTime && now >= closeTime) {
+                isShopOpen = false;
+                document.getElementById('light-red').classList.add('active');
+                statusMsg.innerText = "Der Verkauf ist beendet und geschlossen.";
+                statusMsg.style.color = "#ef4444";
+            } 
+            else if (isShopOpen) {
+                document.getElementById('light-green').classList.add('active');
+                document.getElementById('shopContent').classList.remove('hidden');
                 
-                if (data.openingDate) {
+                if (closeTime) {
+                    statusMsg.innerText = "Der Verkauf schließt in:";
+                    statusMsg.style.color = "#10b981";
+                    startCountdown(data.closingDate, 'close');
+                } else {
+                    statusMsg.innerText = "Der Verkauf ist geöffnet!";
+                    statusMsg.style.color = "#10b981";
+                }
+            } 
+            else if (data.shopStatus === 'bald') {
+                document.getElementById('light-yellow').classList.add('active');
+                if (openTime) {
                     statusMsg.innerText = "Der Verkauf startet in:";
                     statusMsg.style.color = "#f59e0b";
-                    startCountdown(data.openingDate);
+                    startCountdown(data.openingDate, 'open', data.closingDate);
                 } else {
                     statusMsg.innerText = "Der Verkauf startet bald!";
                     statusMsg.style.color = "#f59e0b";
                 }
-            } else {
+            } 
+            else {
                 document.getElementById('light-red').classList.add('active');
                 statusMsg.innerText = "Der Verkauf ist derzeit geschlossen.";
                 statusMsg.style.color = "#ef4444";
@@ -269,35 +289,60 @@
         } catch (e) { console.log("Ladefehler"); }
     });
 
-    function unlockShop(msgText) {
-        document.querySelectorAll('.light').forEach(l => l.classList.remove('active'));
-        document.getElementById('light-green').classList.add('active');
-        const statusMsg = document.getElementById('statusMessage');
-        statusMsg.innerText = msgText;
-        statusMsg.style.color = "#10b981";
-        document.getElementById('countdown-wrapper').classList.add('hidden');
-        document.getElementById('shopContent').classList.remove('hidden');
-    }
+    // NEU: Reparierte Countdown-Logik (ohne 1-Sekunden Verzögerung!)
+    function startCountdown(targetDateStr, mode, nextTargetDateStr = null) {
+        if (countdownTimer) clearInterval(countdownTimer);
+        
+        const targetTime = new Date(targetDateStr).getTime();
+        const wrapper = document.getElementById('countdown-wrapper');
+        wrapper.classList.remove('hidden');
 
-    function startCountdown(openingDateStr) {
-        const openingTime = new Date(openingDateStr).getTime();
-        document.getElementById('countdown-wrapper').classList.remove('hidden');
-
-        countdownTimer = setInterval(() => {
+        function updateTimer() {
             const now = new Date().getTime();
-            const distance = openingTime - now;
+            const distance = targetTime - now;
 
             if (distance <= 0) {
                 clearInterval(countdownTimer);
-                unlockShop("Der Verkauf wurde soeben eröffnet!");
+                
+                if (mode === 'open') {
+                    document.querySelectorAll('.light').forEach(l => l.classList.remove('active'));
+                    document.getElementById('light-green').classList.add('active');
+                    document.getElementById('shopContent').classList.remove('hidden');
+                    
+                    if (nextTargetDateStr && new Date(nextTargetDateStr).getTime() > now) {
+                        document.getElementById('statusMessage').innerText = "Der Verkauf schließt in:";
+                        document.getElementById('statusMessage').style.color = "#10b981";
+                        startCountdown(nextTargetDateStr, 'close'); 
+                    } else {
+                        document.getElementById('statusMessage').innerText = "Der Verkauf wurde soeben eröffnet!";
+                        document.getElementById('statusMessage').style.color = "#10b981";
+                        wrapper.classList.add('hidden');
+                    }
+                } else if (mode === 'close') {
+                    document.querySelectorAll('.light').forEach(l => l.classList.remove('active'));
+                    document.getElementById('light-red').classList.add('active');
+                    document.getElementById('statusMessage').innerText = "Der Verkauf ist beendet und geschlossen.";
+                    document.getElementById('statusMessage').style.color = "#ef4444";
+                    document.getElementById('shopContent').classList.add('hidden');
+                    wrapper.classList.add('hidden');
+                }
                 return;
             }
 
-            document.getElementById('cd-days').innerText = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
-            document.getElementById('cd-hours').innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
-            document.getElementById('cd-mins').innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
-            document.getElementById('cd-secs').innerText = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
-        }, 1000);
+            const d = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('cd-days').innerText = d.toString().padStart(2, '0');
+            document.getElementById('cd-hours').innerText = h.toString().padStart(2, '0');
+            document.getElementById('cd-mins').innerText = m.toString().padStart(2, '0');
+            document.getElementById('cd-secs').innerText = s.toString().padStart(2, '0');
+        }
+
+        // Führt die Funktion SOFORT einmal aus, und erst DANN den Intervall
+        updateTimer();
+        countdownTimer = setInterval(updateTimer, 1000);
     }
 
     function getPrice() { return document.getElementById('role').value === 'Lehrer' ? 25.00 : 55.00; }
