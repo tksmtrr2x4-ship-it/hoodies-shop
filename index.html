@@ -35,7 +35,7 @@
         .light.green.active { background: #10b981; box-shadow: 0 0 20px #10b981, inset 0 0 5px #fff; }
         .status-msg { font-size: 1.1em; font-weight: 800; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
 
-        /* NEU: Das Feld für die persönlichen Nachrichten vom Admin */
+        /* Das Feld für die persönlichen Nachrichten vom Admin */
         .custom-msg { background: #f1f5f9; color: #334155; padding: 10px 20px; border-radius: 8px; margin-top: 15px; font-size: 0.95em; font-weight: 500; border-left: 4px solid var(--primary); display: inline-block; max-width: 90%; }
 
         .countdown-box { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
@@ -70,7 +70,7 @@
 
         .hoodie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 5px; }
         .hoodie-img { width: 100%; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .model-hint { text-align: center; font-size: 0.75em; color: #666; margin-bottom: 20px; font-style: italic; }
+        .model-hint { text-align: center; font-size: 0.75em; color: #666; margin-bottom: 15px; font-style: italic; }
 
         .size-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 10px 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; font-weight: 600; }
         .size-row input { width: 70px; text-align: center; margin-bottom: 0; padding: 8px; }
@@ -93,6 +93,10 @@
         .modal-content h2 { margin-top: 0; font-size: 1.5em; color: var(--secondary); text-transform: none; font-style: normal; border-bottom: 2px solid var(--border); padding-bottom: 10px; text-align: left;}
         .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5em; cursor: pointer; color: #888; font-weight: bold;}
         .close-modal:hover { color: #000; }
+        
+        /* NEU: Größentabelle Button Styling */
+        .btn-sizeguide { background: #e0f2fe; color: var(--primary-dark); border: 2px solid var(--primary); display: inline-block; padding: 8px 15px; border-radius: 20px; font-size: 0.9em; font-weight: bold; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+        .btn-sizeguide:hover { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
@@ -114,7 +118,6 @@
         </div>
         <div class="status-msg" id="statusMessage">Lade Status...</div>
         
-        <!-- NEU: Das Benachrichtigungs-Feld für eigene Texte -->
         <div id="customMessage" class="custom-msg hidden"></div>
 
         <div id="countdown-wrapper" class="countdown-box hidden">
@@ -157,6 +160,11 @@
                     <img src="assets/F57861C4-A647-462E-AC1E-44D149B11DD3_1_201_a.jpeg" class="hoodie-img" alt="Hoodie Back">
                 </div>
                 <div class="model-hint">💡 Die abgebildete Person ist 1,83m groß und trägt Größe M (fällt leicht oversized aus).</div>
+                
+                <!-- NEU: Button für Größentabelle -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <a class="btn-sizeguide" onclick="openModal('modal-sizeguide')">📏 Finde deine perfekte Größe (Tabelle anzeigen)</a>
+                </div>
                 
                 <div id="sizes">
                     <div class="size-row"><span>Größe XS</span><input type="number" id="qtyXS" min="0" value="0"></div>
@@ -201,6 +209,17 @@
     <a onclick="openModal('modal-impressum')">Impressum</a> 
 </div>
 
+<!-- MODAL: GRÖSSENTABELLE (NEU) -->
+<div class="modal-overlay" id="modal-sizeguide">
+    <div class="modal-content" style="max-width: 800px; text-align: center;">
+        <span class="close-modal" onclick="closeModal('modal-sizeguide')">×</span>
+        <h2>Größenempfehlung</h2>
+        <!-- WICHTIG: Das Bild muss sizeguide.png heißen und im assets Ordner liegen! -->
+        <img src="assets/sizeguide.png" alt="Größentabelle" style="width: 100%; border-radius: 8px; margin-top: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <p style="font-size: 0.85em; color: #666; margin-top: 15px;">Finde deine empfohlene Größe (Size) anhand deiner Körpergröße (Height in cm) und deines Gewichts (Weight in kg).</p>
+    </div>
+</div>
+
 <!-- MODAL: AGB -->
 <div class="modal-overlay" id="modal-agb">
     <div class="modal-content">
@@ -242,7 +261,7 @@
     pingServer(); setInterval(pingServer, 15000);
 
     let countdownTimer;
-    let globalSettings = {}; // Speichert die Nachrichten für dynamische Wechsel
+    let globalSettings = {}; 
 
     window.addEventListener('DOMContentLoaded', async () => {
         try {
@@ -287,7 +306,6 @@
         } catch (e) { console.log("Ladefehler"); }
     });
 
-    // Hilfsfunktion: Ampel und Nachricht gleichzeitig schalten
     function setLight(color, mainText, customMsgText) {
         document.querySelectorAll('.light').forEach(l => l.classList.remove('active'));
         document.getElementById('light-' + color).classList.add('active');
