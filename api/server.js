@@ -36,7 +36,6 @@ const SettingsSchema = new mongoose.Schema({
     shopStatus: { type: String, default: "geöffnet" },
     openingDate: { type: Date, default: null },
     closingDate: { type: Date, default: null },
-    // NEU: Eigene Nachrichten für die Ampel
     msgOpen: { type: String, default: "" },
     msgSoon: { type: String, default: "" },
     msgClosed: { type: String, default: "" }
@@ -177,27 +176,48 @@ app.post('/api/admin/settings', adminAuth, async (req, res) => {
     res.sendStatus(200);
 });
 
+// NEU: Perfekter Apple Numbers / Excel Export (mit Semikolon und Datum)
 app.get('/api/admin/export', adminAuth, async (req, res) => {
     await connectDB();
     const orders = await Order.find().lean();
     let flattenedOrders =[];
+    
     orders.forEach(o => {
         const singlePrice = (o.role === 'Lehrer') ? 25 : 55;
-        for (const[size, qty] of Object.entries(o.items)) {
+        
+        // Datum und Uhrzeit korrekt zusammenbauen
+        const orderDate = new Date(o.createdAt);
+        const dateStr = orderDate.toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
+        const timeStr = orderDate.toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute:'2-digit' });
+        
+        for (const [size, qty] of Object.entries(o.items)) {
             for (let i = 0; i < qty; i++) {
                 flattenedOrders.push({
-                    invoiceNumber: o.invoiceNumber, name: o.name, role: o.role, email: o.email,
-                    size: size, price: singlePrice, status: o.status, 
-                    createdAt: new Date(o.createdAt).toLocaleString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', minute:'2-digit' })
+                    "Rechnungs-ID": o.invoiceNumber,
+                    "Kaufdatum": `${dateStr} ${timeStr} Uhr`,
+                    "Name": o.name,
+                    "Rolle": o.role,
+                    "E-Mail": o.email,
+                    "Größe": size,
+                    "Preis": `${singlePrice.toFixed(2).replace('.', ',')} €`,
+                    "Status": o.status
                 });
             }
         }
     });
-    const fields =['invoiceNumber', 'name', 'role', 'email', 'size', 'price', 'status', 'createdAt'];
-    const json2csvParser = new Parser({ fields });
-    res.header('Content-Type', 'text/csv');
+    
+    // Spalten festlegen
+    const fields =['Rechnungs-ID', 'Kaufdatum', 'Name', 'Rolle', 'E-Mail', 'Größe', 'Preis', 'Status'];
+    
+    // delimiter: ';' -> ZWINGEND NÖTIG für deutsches Excel/Numbers!
+    const json2csvParser = new Parser({ fields, delimiter: ';' });
+    
+    // \uFEFF -> ZWINGEND NÖTIG, damit Mac/Windows Umlaute (ö, ä, ü) nicht zerstören!
+    const csv = '\uFEFF' + json2csvParser.parse(flattenedOrders);
+    
+    res.header('Content-Type', 'text/csv; charset=utf-8');
     res.attachment('hoodie_bestellliste.csv');
-    res.send(json2csvParser.parse(flattenedOrders));
+    res.send(csv);
 });
 
 module.exports = app;
